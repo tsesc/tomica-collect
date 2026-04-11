@@ -1,0 +1,14 @@
+[project]
+name = "tomica-scraper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "httpx>=0.28.1",
+    "lxml>=6.0.3",
+]
+
+[project.scripts]
+scrape = "scraper.cli:main"

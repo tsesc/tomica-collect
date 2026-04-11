@@ -2,77 +2,123 @@
 
 import httpx
 from bs4 import BeautifulSoup
-import json
 import re
 import time
-from pathlib import Path
 
-BASE_URL = "https://www.takaratomy.co.jp/products/tomica/lineup/search.htm"
-DETAIL_BASE = "https://www.takaratomy.co.jp/products/tomica"
+BASE = "https://www.takaratomy.co.jp/products/tomica/lineup/regular"
+IMAGE_BASE = "https://www.takaratomy.co.jp/products/tomica"
+PAGES = [
+    f"{BASE}/",
+    f"{BASE}/021-040.htm",
+    f"{BASE}/041-060.htm",
+    f"{BASE}/061-080.htm",
+    f"{BASE}/081-100.htm",
+    f"{BASE}/101-120.htm",
+    f"{BASE}/121-140.htm",
+    f"{BASE}/141-150.htm",
+]
 
-def fetch_catalog_page(client: httpx.Client) -> BeautifulSoup:
-    resp = client.get(BASE_URL, timeout=30)
-    resp.raise_for_status()
-    return BeautifulSoup(resp.content, "lxml")
 
-def parse_listing(soup: BeautifulSoup) -> list[dict]:
+def parse_page(soup: BeautifulSoup) -> list[dict]:
+    """Parse a single listing page.
+
+    Structure:
+      div.lineup-box
+        div.title-box > p.CarName  "No.1 日産 スカイライン GT-R(BNR34) パトロールカー"
+        div.car-pic > img
+        p.mark-action  "サスペンション"
+    """
     items = []
-    for card in soup.select(".lineup_list li, .itemList li, .product-item"):
-        item = {}
-        number_el = card.select_one(".number, .item-number, .no")
-        if number_el:
-            item["model_number"] = number_el.get_text(strip=True)
-        name_el = card.select_one(".name, .item-name, .ttl, a")
-        if name_el:
-            item["car_name"] = name_el.get_text(strip=True)
-        img = card.select_one("img")
+
+    for box in soup.select("div.lineup-box"):
+        car_name_el = box.select_one(".CarName")
+        if not car_name_el:
+            continue
+
+        text = car_name_el.get_text(strip=True)
+        match = re.match(r"(No\.\d+)\s+(.+)", text)
+        if not match:
+            continue
+
+        model_number = match.group(1)
+        car_name = match.group(2)
+
+        # Image
+        image_url = None
+        img = box.select_one("div.car-pic img")
         if img and img.get("src"):
             src = img["src"]
-            if not src.startswith("http"):
-                src = f"{DETAIL_BASE}/{src.lstrip('/')}"
-            item["image_url"] = src
-        link = card.select_one("a[href]")
-        if link:
-            href = link["href"]
-            if not href.startswith("http"):
-                href = f"{DETAIL_BASE}/{href.lstrip('/')}"
-            item["detail_url"] = href
-        if item.get("model_number") or item.get("car_name"):
-            items.append(item)
+            if src.startswith("../../"):
+                src = IMAGE_BASE + "/" + src.replace("../../", "")
+            elif src.startswith("../"):
+                src = IMAGE_BASE + "/lineup/" + src.replace("../", "")
+            elif not src.startswith("http"):
+                src = f"{BASE}/{src}"
+            image_url = src
+
+        # Features
+        features = None
+        feat_el = box.select_one("p.mark-action")
+        if feat_el:
+            features = feat_el.get_text(strip=True)
+
+        # Guess manufacturer
+        manufacturer = _guess_manufacturer(car_name)
+
+        items.append({
+            "model_number": model_number,
+            "car_name": car_name,
+            "image_url": image_url,
+            "manufacturer": manufacturer,
+            "features": features,
+        })
+
     return items
 
-def enrich_item(client: httpx.Client, item: dict) -> dict:
-    detail_url = item.get("detail_url")
-    if not detail_url:
-        return item
-    try:
-        resp = client.get(detail_url, timeout=30)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.content, "lxml")
-        for row in soup.select("table tr, .spec-item, dl"):
-            text = row.get_text()
-            if "メーカー" in text or "manufacturer" in text.lower():
-                val = row.select_one("td:last-child, dd")
-                if val:
-                    item["manufacturer"] = val.get_text(strip=True)
-        body_text = soup.get_text()
-        color_match = re.search(r"カラー[：:]?\s*(.+?)(?:\n|$)", body_text)
-        if color_match:
-            item["body_color"] = [c.strip() for c in color_match.group(1).split("、")]
-    except Exception:
-        pass
-    return item
+
+def _guess_manufacturer(car_name: str) -> str | None:
+    """Guess manufacturer from car name."""
+    brands = {
+        "日産": "Nissan", "トヨタ": "Toyota", "ホンダ": "Honda", "Honda": "Honda",
+        "スバル": "Subaru", "マツダ": "Mazda", "三菱": "Mitsubishi", "スズキ": "Suzuki",
+        "ダイハツ": "Daihatsu", "いすゞ": "Isuzu", "日野": "Hino", "UD": "UD Trucks",
+        "BMW": "BMW", "メルセデス": "Mercedes-Benz", "ポルシェ": "Porsche",
+        "ランボルギーニ": "Lamborghini", "フェラーリ": "Ferrari", "アウディ": "Audi",
+        "フォルクスワーゲン": "Volkswagen", "ボルボ": "Volvo", "ルノー": "Renault",
+        "シボレー": "Chevrolet", "フォード": "Ford", "ジープ": "Jeep",
+        "ランドローバー": "Land Rover", "LEXUS": "Lexus", "レクサス": "Lexus",
+        "光岡": "Mitsuoka", "コマツ": "Komatsu", "川崎": "Kawasaki",
+        "モリタ": "Morita", "豊田": "Toyota", "ハマー": "GM",
+        "FIAT": "Fiat", "シトロエン": "Citroen", "プジョー": "Peugeot",
+        "キャタピラー": "Caterpillar", "CAT": "Caterpillar",
+    }
+    for jp, en in brands.items():
+        if jp in car_name:
+            return en
+    return None
+
 
 def scrape_regular_series() -> list[dict]:
+    """Scrape all regular Tomica series pages."""
+    all_items: list[dict] = []
+
     with httpx.Client(
         headers={"User-Agent": "TomicaCollect-Scraper/1.0 (personal project)"},
         follow_redirects=True,
     ) as client:
-        soup = fetch_catalog_page(client)
-        items = parse_listing(soup)
-        enriched = []
-        for i, item in enumerate(items):
-            enriched.append(enrich_item(client, item))
-            if i % 10 == 0 and i > 0:
+        for i, url in enumerate(PAGES):
+            print(f"  Fetching {url} ...")
+            try:
+                resp = client.get(url, timeout=30)
+                resp.raise_for_status()
+                soup = BeautifulSoup(resp.content, "lxml")
+                items = parse_page(soup)
+                all_items.extend(items)
+                print(f"    Found {len(items)} items")
+            except Exception as e:
+                print(f"    Error: {e}")
+
+            if i < len(PAGES) - 1:
                 time.sleep(1)
-        return enriched
+
+    return all_items

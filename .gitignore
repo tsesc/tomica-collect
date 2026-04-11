@@ -5,3 +5,6 @@ dist/
 .env.local
 .DS_Store
 *.tsbuildinfo
+scraper/data/
+scraper/.venv/
+__pycache__/

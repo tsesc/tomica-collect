@@ -8,3 +8,4 @@ dist/
 scraper/data/
 scraper/.venv/
 __pycache__/
+.wrangler/

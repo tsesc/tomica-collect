@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { matchCandidates } from '../../api/identify'
+import { matchCandidates } from '../../functions/api/identify'
 
 const CATALOG = [
   { id: '1', model_number: 'No.23', car_name: '日産 GT-R', car_name_en: 'Nissan GT-R', manufacturer: 'Nissan', body_color: ['紅'], vehicle_type: 'sports' },

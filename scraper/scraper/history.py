@@ -65,19 +65,45 @@ def scrape_number_history(client: httpx.Client, number: int) -> list[dict]:
             "series": "regular",
             "is_first_edition": False,
             "source": "community",
+            "image_url": None,
         }
 
         items.append(item)
 
-    # Try to extract release periods
-    for match in re.finditer(
-        r'(\d{4}/\d{2})〜(\d{4}/\d{2}|\s*$)',
-        text,
-    ):
-        start = match.group(1)
-        end = match.group(2).strip() if match.group(2).strip() else None
-        # Associate with the nearest item (rough heuristic)
-        # This is best-effort
+    # Extract images: alt text contains "No.X-Y" pattern
+    # Images use both src and data-src (lazy loading)
+    for img in soup.find_all("img"):
+        src = img.get("data-src") or img.get("src", "")
+        alt = img.get("alt", "")
+
+        # Skip placeholders, logos, thumbnails
+        if not src or "pagespeed_static" in src or "data:image" in src:
+            continue
+        if "thumbnail" in src or "logo" in src:
+            continue
+
+        # Match variant from alt text: "No.35-7" or "トミカNo.35-7"
+        alt_match = re.search(r'No\.(\d+)-(\d+)', alt)
+        if not alt_match:
+            continue
+
+        img_num = int(alt_match.group(1))
+        img_variant = int(alt_match.group(2))
+
+        # Prefer box image, then front, skip rear/side duplicates
+        is_box = "box" in src.lower() or "箱" in alt
+        is_front = "front" in src.lower() or "前" in alt
+
+        # Find matching item and set image (prefer box > front > any)
+        for item in items:
+            if item["variant"] == img_variant:
+                if item["image_url"] is None:
+                    item["image_url"] = src
+                elif is_box:
+                    item["image_url"] = src  # box photo preferred
+                elif is_front and "box" not in (item["image_url"] or ""):
+                    item["image_url"] = src  # front preferred over other
+                break
 
     return items
 

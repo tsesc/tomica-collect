@@ -11,10 +11,15 @@ def main():
     data_dir = Path(__file__).parent.parent / "data"
 
     if len(sys.argv) > 1 and sys.argv[1] == "history":
+        import json
         print("Scraping historical Tomica lineup (all generations)...")
         items = scrape_all_history()
         print(f"Found {len(items)} historical variants")
-        write_json(items, data_dir / "history.json")
+        # Write raw (not normalized) to preserve variant + image_url
+        output_path = data_dir / "history.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
         print("Done!")
     else:
         print("Scraping current Tomica regular series...")

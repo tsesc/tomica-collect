@@ -14,6 +14,9 @@ vi.mock('../../src/lib/supabase', () => ({
     from: () => ({
       select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { ai_provider: 'openai' }, error: null }) }) }),
     }),
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: { access_token: 'test-token' } }, error: null }),
+    },
   },
 }))
 

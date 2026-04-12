@@ -19,10 +19,18 @@ export function useRecognition() {
     try {
       const { data: settings } = await supabase.from('user_settings').select('ai_provider').eq('user_id', user.id).single()
       const provider: AiProvider = settings?.ai_provider ?? 'openai'
+
+      // Get current session token for auth
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('No active session')
+
       const resp = await fetch('/api/identify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_base64: imageBase64, user_id: user.id, ai_provider: provider }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ image_base64: imageBase64, ai_provider: provider }),
       })
       if (!resp.ok) { const data = await resp.json(); throw new Error(data.error ?? 'Recognition failed') }
       const data: RecognitionResult = await resp.json()

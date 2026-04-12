@@ -138,8 +138,36 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, request } = context
 
   try {
-    const { image_base64, user_id, ai_provider } = (await request.json()) as IdentifyRequest
+    // Auth: verify JWT from Authorization header
+    const authHeader = request.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+    }
+
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
+    const anonClient = createClient(env.SUPABASE_URL, authHeader.replace('Bearer ', ''))
+    const { data: { user }, error: authError } = await createClient(
+      env.SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY
+    ).auth.getUser(authHeader.replace('Bearer ', ''))
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    const { image_base64, ai_provider } = (await request.json()) as Omit<IdentifyRequest, 'user_id'>
+    const user_id = user.id // Use verified user ID, never trust client
+
+    // Validate ai_provider
+    const validProviders = ['openai', 'gemini', 'claude']
+    if (!validProviders.includes(ai_provider)) {
+      return new Response(JSON.stringify({ error: 'Invalid AI provider' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    // Validate image_base64 size (max 10MB)
+    if (!image_base64 || image_base64.length > 10 * 1024 * 1024) {
+      return new Response(JSON.stringify({ error: 'Image too large or missing' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
 
     const { data: settings } = await supabase.from('user_settings').select('api_keys').eq('user_id', user_id).single()
     if (!settings?.api_keys?.[ai_provider]) {
@@ -181,8 +209,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       { headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
+    console.error('identify error:', err)
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Recognition failed. Please try again.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

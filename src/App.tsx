@@ -8,21 +8,11 @@ import { SettingsPage } from './pages/SettingsPage'
 import { AuthPage } from './pages/AuthPage'
 import { useAuth } from './hooks/useAuth'
 
-function ProtectedRoutes() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="min-h-screen bg-surface flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>
   if (!user) return <Navigate to="/auth" />
-  return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<HomePage />} />
-        <Route path="scan-result" element={<ScanResultPage />} />
-        <Route path="catalog" element={<CatalogPage />} />
-        <Route path="collection" element={<CollectionPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-      </Route>
-    </Routes>
-  )
+  return <>{children}</>
 }
 
 export default function App() {
@@ -30,7 +20,16 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/*" element={<ProtectedRoutes />} />
+        <Route element={<Layout />}>
+          {/* Public routes — no login required */}
+          <Route path="catalog" element={<CatalogPage />} />
+
+          {/* Protected routes — login required */}
+          <Route index element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+          <Route path="scan-result" element={<ProtectedRoute><ScanResultPage /></ProtectedRoute>} />
+          <Route path="collection" element={<ProtectedRoute><CollectionPage /></ProtectedRoute>} />
+          <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        </Route>
       </Routes>
     </BrowserRouter>
   )

@@ -5,7 +5,13 @@ import { useCollection } from '../hooks/useCollection'
 import { useAuth } from '../hooks/useAuth'
 import { CatalogCard } from '../components/CatalogCard'
 import { CarDetailModal } from '../components/CarDetailModal'
-import type { CatalogItem } from '../lib/types'
+import type { CatalogItem, Series } from '../lib/types'
+
+const SERIES_TABS: { value: Series | 'all'; label: string }[] = [
+  { value: 'regular', label: '常規' },
+  { value: 'dream', label: 'Dream' },
+  { value: 'premium', label: 'Premium' },
+]
 
 const NUMBER_RANGES: { value: NumberRange; label: string }[] = [
   { value: '1-30', label: '1–30' },
@@ -37,6 +43,7 @@ const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => C
 const DECADES = [2020, 2010, 2000, 1990, 1980, 1970]
 
 export function CatalogPage() {
+  const [series, setSeries] = useState<Series>('regular')
   const [numberRange, setNumberRange] = useState<NumberRange | null>(null)
   const [source, setSource] = useState<SourceFilter>('all')
   const [collectionFilter, setCollectionFilter] = useState<CollectionFilter>('all')
@@ -47,9 +54,11 @@ export function CatalogPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
+  const isRegular = series === 'regular'
   const { items, loading } = useCatalog({
-    numberRange: (search || year) ? undefined : (numberRange ?? '1-30'),
-    source: source !== 'all' ? source : undefined,
+    series,
+    numberRange: (search || year || !isRegular) ? undefined : (numberRange ?? '1-30'),
+    source: (isRegular && source !== 'all') ? source : undefined,
     year: year ?? undefined,
     search: debouncedSearch || undefined,
   })
@@ -91,6 +100,23 @@ export function CatalogPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 md:py-5">
+      {/* Series tabs */}
+      <div className="flex gap-1 mb-3 border-b border-outline-variant/20">
+        {SERIES_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => { setSeries(tab.value as Series); setYear(null) }}
+            className={`px-4 py-2 text-sm font-semibold transition-all border-b-2 -mb-px
+              ${series === tab.value
+                ? 'border-primary text-primary'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+              }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search bar */}
       <div className="mb-3">
         <div className="relative">
@@ -112,8 +138,8 @@ export function CatalogPage() {
         </div>
       </div>
 
-      {/* Number range tabs — hidden when searching or year filter active */}
-      {activeMode === 'range' && (
+      {/* Number range tabs — only for regular series, hidden when searching or year filter */}
+      {isRegular && activeMode === 'range' && (
         <div className="mb-3 overflow-x-auto scrollbar-hide">
           <div className="flex gap-1.5 min-w-max">
             {NUMBER_RANGES.map((r) => (
@@ -165,25 +191,28 @@ export function CatalogPage() {
 
           <div className="w-px h-5 bg-outline-variant/30" />
 
-          {/* Source filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">來源</span>
-            {SOURCE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setSource(opt.value)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
-                  ${source === opt.value
-                    ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-                    : 'bg-white text-on-surface-variant border border-outline-variant/20 hover:bg-surface-container-low'
-                  }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="w-px h-5 bg-outline-variant/30" />
+          {/* Source filter — only for regular */}
+          {isRegular && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">來源</span>
+                {SOURCE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setSource(opt.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
+                      ${source === opt.value
+                        ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                        : 'bg-white text-on-surface-variant border border-outline-variant/20 hover:bg-surface-container-low'
+                      }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="w-px h-5 bg-outline-variant/30" />
+            </>
+          )}
 
           {/* Collection filter */}
           <div className="flex items-center gap-1.5">

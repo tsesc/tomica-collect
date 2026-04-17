@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import type { CatalogItem } from '../lib/types'
+import type { CatalogItem, Series } from '../lib/types'
 import { supabase } from '../lib/supabase'
 
 export type NumberRange = '1-30' | '31-60' | '61-90' | '91-120' | '121-150'
 export type SourceFilter = 'all' | 'official' | 'community'
 
 interface Filters {
+  series?: Series
   numberRange?: NumberRange
   source?: SourceFilter
   year?: number
@@ -31,6 +32,10 @@ export function useCatalog(filters?: Filters) {
       setLoading(true)
       let query = supabase.from('tomica_catalog').select('*')
 
+      if (filters?.series) {
+        query = query.eq('series', filters.series)
+      }
+
       if (filters?.source && filters.source !== 'all') {
         query = query.eq('source', filters.source)
       }
@@ -41,8 +46,6 @@ export function useCatalog(filters?: Filters) {
       }
 
       if (filters?.year) {
-        // release_start format is "YYYY-MM", filter items that were active in this year
-        // active = release_start year <= filter year AND (release_end is null OR release_end year >= filter year)
         const yearStart = `${filters.year}-01`
         const yearEnd = `${filters.year}-12`
         query = query.lte('release_start', yearEnd)
@@ -58,7 +61,7 @@ export function useCatalog(filters?: Filters) {
       setLoading(false)
     }
     fetch()
-  }, [filters?.numberRange, filters?.source, filters?.year, filters?.search])
+  }, [filters?.series, filters?.numberRange, filters?.source, filters?.year, filters?.search])
 
   return { items, loading, error }
 }

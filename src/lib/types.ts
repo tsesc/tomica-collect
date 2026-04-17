@@ -1,4 +1,4 @@
-export type Series = 'regular' | 'premium' | 'limited_vintage' | 'dream'
+export type Series = 'regular' | 'premium' | 'premium_unlimited' | 'limited_vintage' | 'dream'
 export type VehicleType = 'sedan' | 'suv' | 'truck' | 'bus' | 'sports' | 'emergency' | 'construction' | 'other'
 export type Condition = 'mint' | 'good' | 'fair' | 'poor'
 export type AiProvider = 'openai' | 'gemini' | 'claude'

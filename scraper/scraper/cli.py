@@ -10,6 +10,11 @@ from .tomica import scrape_regular_series
 from .history import scrape_all_history
 from .dream import scrape_dream_series
 from .premium import scrape_premium_series
+from .funbox import scrape_funbox
+from .tlv import scrape_tlv_series
+from .unlimited import scrape_unlimited_series
+from .cars import scrape_cars_series
+from .dedup import dedup_report
 from .output import write_json, write_sql_seed
 
 
@@ -180,6 +185,54 @@ def main():
         output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
         print(f"Wrote {len(items)} items to {output_path}")
         print("Done!")
+    elif len(args) >= 1 and args[0] == "tlv":
+        print("Scraping Tomica Limited Vintage (TLV + TLV NEO)...")
+        items = asyncio.run(scrape_tlv_series())
+        print(f"Found {len(items)} TLV items")
+        _backup(data_dir, "tlv.json")
+        output_path = data_dir / "tlv.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
+        print("Done!")
+    elif len(args) >= 1 and args[0] == "unlimited":
+        print("Scraping Tomica Premium Unlimited...")
+        items = asyncio.run(scrape_unlimited_series())
+        print(f"Found {len(items)} Premium Unlimited items")
+        _backup(data_dir, "unlimited.json")
+        output_path = data_dir / "unlimited.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
+        print("Done!")
+    elif len(args) >= 1 and args[0] == "cars":
+        print("Scraping Cars Tomica (Pixar)...")
+        items = asyncio.run(scrape_cars_series())
+        print(f"Found {len(items)} Cars Tomica items")
+        _backup(data_dir, "cars.json")
+        output_path = data_dir / "cars.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
+        print("Done!")
+    elif len(args) >= 1 and args[0] == "funbox":
+        print("Scraping Tomica from shop.funbox.com.tw...")
+        items = asyncio.run(scrape_funbox())
+        print(f"Found {len(items)} Funbox items")
+        _backup(data_dir, "funbox.json")
+        _check_and_warn(data_dir, "funbox", items)
+        output_path = data_dir / "funbox.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
+        print("Done!")
+    elif len(args) >= 1 and args[0] == "dedup":
+        report = dedup_report(data_dir)
+        print(report)
+        # Also save to file
+        output_path = data_dir / "dedup_report.txt"
+        output_path.write_text(report)
+        print(f"\nReport saved to {output_path}")
     else:
         print("Scraping current Tomica regular series...")
         items = asyncio.run(scrape_regular_series())

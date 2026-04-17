@@ -7,10 +7,12 @@ import { CatalogCard } from '../components/CatalogCard'
 import { CarDetailModal } from '../components/CarDetailModal'
 import type { CatalogItem, Series } from '../lib/types'
 
-const SERIES_TABS: { value: Series | 'all'; label: string }[] = [
+const SERIES_TABS: { value: Series; label: string }[] = [
   { value: 'regular', label: '常規' },
-  { value: 'dream', label: 'Dream' },
+  { value: 'limited_vintage', label: 'TLV' },
   { value: 'premium', label: 'Premium' },
+  { value: 'premium_unlimited', label: 'Unlimited' },
+  { value: 'dream', label: 'Dream' },
 ]
 
 const NUMBER_RANGES: { value: NumberRange; label: string }[] = [

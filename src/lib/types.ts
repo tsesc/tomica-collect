@@ -17,7 +17,8 @@ export interface CatalogItem {
   release_date: string | null
   retired: boolean
   image_url: string | null
-  source: 'official' | 'manual'
+  source: 'official' | 'community' | 'manual'
+  variant: number | null
   metadata: Record<string, unknown>
 }
 

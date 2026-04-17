@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react'
-import type { CatalogItem, Series, VehicleType } from '../lib/types'
+import type { CatalogItem } from '../lib/types'
 import { supabase } from '../lib/supabase'
 
+export type NumberRange = '1-30' | '31-60' | '61-90' | '91-120' | '121-150'
+export type SourceFilter = 'all' | 'official' | 'community'
+
 interface Filters {
-  series?: Series
-  manufacturer?: string
-  vehicle_type?: VehicleType
+  numberRange?: NumberRange
+  source?: SourceFilter
   search?: string
+}
+
+/** Map range label → model_number patterns to match */
+const RANGE_NUMBERS: Record<NumberRange, string[]> = {
+  '1-30': Array.from({ length: 30 }, (_, i) => `No.${i + 1}`),
+  '31-60': Array.from({ length: 30 }, (_, i) => `No.${i + 31}`),
+  '61-90': Array.from({ length: 30 }, (_, i) => `No.${i + 61}`),
+  '91-120': Array.from({ length: 30 }, (_, i) => `No.${i + 91}`),
+  '121-150': Array.from({ length: 30 }, (_, i) => `No.${i + 121}`),
 }
 
 export function useCatalog(filters?: Filters) {
@@ -18,16 +29,26 @@ export function useCatalog(filters?: Filters) {
     async function fetch() {
       setLoading(true)
       let query = supabase.from('tomica_catalog').select('*')
-      if (filters?.series) query = query.eq('series', filters.series)
-      if (filters?.manufacturer) query = query.eq('manufacturer', filters.manufacturer)
-      if (filters?.vehicle_type) query = query.eq('vehicle_type', filters.vehicle_type)
-      if (filters?.search) query = query.or(`car_name.ilike.%${filters.search}%,model_number.ilike.%${filters.search}%`)
-      const { data, error: err } = await query.order('model_number')
+
+      if (filters?.source && filters.source !== 'all') {
+        query = query.eq('source', filters.source)
+      }
+
+      if (filters?.numberRange) {
+        const nums = RANGE_NUMBERS[filters.numberRange]
+        query = query.in('model_number', nums)
+      }
+
+      if (filters?.search) {
+        query = query.or(`car_name.ilike.%${filters.search}%,model_number.ilike.%${filters.search}%`)
+      }
+
+      const { data, error: err } = await query.order('model_number').order('variant', { ascending: true, nullsFirst: false })
       if (err) { setError(err.message) } else { setItems(data as CatalogItem[]) }
       setLoading(false)
     }
     fetch()
-  }, [filters?.series, filters?.manufacturer, filters?.vehicle_type, filters?.search])
+  }, [filters?.numberRange, filters?.source, filters?.search])
 
   return { items, loading, error }
 }

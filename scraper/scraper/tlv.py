@@ -116,27 +116,27 @@ async def scrape_tlv_series() -> list[dict]:
         },
         follow_redirects=True,
     ) as client:
-        # First request to get total pages
-        resp = await client.get(API_URL, params={"series_id": 2, "page": 1}, timeout=30)
+        # First request (POST) to get total pages
+        resp = await client.post(API_URL, data={"series_id": 2, "page": 1}, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         total_pages = data.get("pages", 1)
-        print(f"  TLV API: {total_pages} pages")
+        print(f"  TLV API: {total_pages} pages (POST)")
 
         # Parse first page
         items = _parse_results_html(data.get("dblineup_src", ""))
         all_items.extend(items)
         print(f"  Page 1 → {len(items)} items")
 
-        # Fetch remaining pages concurrently
+        # Fetch remaining pages concurrently (must use POST)
         async def fetch_page(page: int) -> list[dict]:
             async with semaphore:
-                r = await client.get(API_URL, params={"series_id": 2, "page": page}, timeout=30)
+                r = await client.post(API_URL, data={"series_id": 2, "page": page}, timeout=30)
                 r.raise_for_status()
                 d = r.json()
                 page_items = _parse_results_html(d.get("dblineup_src", ""))
                 if page % 20 == 0 or page == total_pages:
-                    print(f"  Page {page}/{total_pages} → {len(page_items)} items (running total: {len(all_items) + len(page_items)})")
+                    print(f"  Page {page}/{total_pages} → {len(page_items)} items")
                 return page_items
 
         results = await asyncio.gather(

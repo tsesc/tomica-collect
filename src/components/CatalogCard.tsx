@@ -1,4 +1,5 @@
 import type { CatalogItem } from '../lib/types'
+import { translateCarName } from '../lib/translate'
 
 interface Props {
   item: CatalogItem
@@ -9,6 +10,7 @@ interface Props {
 export function CatalogCard({ item, isCollected, onClick }: Props) {
   const isHistorical = item.source === 'community'
   const modelNum = item.model_number.replace('No.', '#')
+  const { displayName, manufacturer } = translateCarName(item.car_name, item.manufacturer)
 
   return (
     <div
@@ -54,9 +56,9 @@ export function CatalogCard({ item, isCollected, onClick }: Props) {
             <span className="text-[8px] px-1 py-px bg-primary/10 text-primary rounded font-medium">現行</span>
           )}
         </div>
-        <div className="text-xs font-medium leading-tight text-on-surface line-clamp-2">{item.car_name}</div>
-        {item.manufacturer && (
-          <div className="text-[10px] text-on-surface-variant truncate">{item.manufacturer}</div>
+        <div className="text-xs font-medium leading-tight text-on-surface line-clamp-2">{displayName}</div>
+        {manufacturer && (
+          <div className="text-[10px] text-on-surface-variant truncate">{manufacturer}</div>
         )}
       </div>
     </div>

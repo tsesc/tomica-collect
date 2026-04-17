@@ -28,3 +28,18 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Modal slide-up animation */
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
+@media (min-width: 768px) {
+  @keyframes slide-up {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+}

@@ -1,8 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useCatalog } from '../hooks/useCatalog'
 import type { NumberRange, SourceFilter } from '../hooks/useCatalog'
 import { useCollection } from '../hooks/useCollection'
+import { useAuth } from '../hooks/useAuth'
 import { CatalogCard } from '../components/CatalogCard'
+import { CarDetailModal } from '../components/CarDetailModal'
+import type { CatalogItem } from '../lib/types'
 
 const NUMBER_RANGES: { value: NumberRange; label: string }[] = [
   { value: '1-30', label: '1–30' },
@@ -32,15 +35,17 @@ export function CatalogPage() {
   const [collectionFilter, setCollectionFilter] = useState<CollectionFilter>('all')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
 
   const { items, loading } = useCatalog({
     numberRange: search ? undefined : numberRange,
     source: source !== 'all' ? source : undefined,
     search: debouncedSearch || undefined,
   })
-  const { collectedIds } = useCollection()
+  const { user } = useAuth()
+  const { collectedIds, addToCollection, removeFromCollection, items: collectionItems } = useCollection()
 
-  // Debounce search input
   const handleSearch = (value: string) => {
     setSearch(value)
     clearTimeout((handleSearch as { timer?: ReturnType<typeof setTimeout> }).timer)
@@ -49,7 +54,6 @@ export function CatalogPage() {
     }, 300)
   }
 
-  // Client-side collection filter
   const filtered = useMemo(() => {
     return items.filter((item) => {
       if (collectionFilter === 'collected') return collectedIds.has(item.id)
@@ -58,9 +62,22 @@ export function CatalogPage() {
     })
   }, [items, collectionFilter, collectedIds])
 
-  // Stats
   const totalCount = filtered.length
   const collectedCount = filtered.filter((item) => collectedIds.has(item.id)).length
+
+  const handleToggleCollection = useCallback(async (item: CatalogItem) => {
+    if (!user) return
+    setActionLoading(true)
+    try {
+      if (collectedIds.has(item.id)) {
+        const entry = collectionItems.find((c) => c.catalog_id === item.id)
+        if (entry) await removeFromCollection(entry.id)
+      } else {
+        await addToCollection(item.id)
+      }
+    } catch { /* error handled by hook */ }
+    setActionLoading(false)
+  }, [user, collectedIds, collectionItems, addToCollection, removeFromCollection])
 
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 md:py-5">
@@ -85,7 +102,7 @@ export function CatalogPage() {
         </div>
       </div>
 
-      {/* Number range tabs — hidden when searching */}
+      {/* Number range tabs */}
       {!search && (
         <div className="mb-3 overflow-x-auto scrollbar-hide">
           <div className="flex gap-1.5 min-w-max">
@@ -109,7 +126,6 @@ export function CatalogPage() {
       {/* Filter chips row */}
       <div className="mb-3 overflow-x-auto scrollbar-hide">
         <div className="flex gap-4 min-w-max items-center">
-          {/* Source filter */}
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">來源</span>
             {SOURCE_OPTIONS.map((opt) => (
@@ -126,11 +142,7 @@ export function CatalogPage() {
               </button>
             ))}
           </div>
-
-          {/* Divider */}
           <div className="w-px h-5 bg-outline-variant/30" />
-
-          {/* Collection filter */}
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">收藏</span>
             {COLLECTION_OPTIONS.map((opt) => (
@@ -181,7 +193,12 @@ export function CatalogPage() {
       ) : filtered.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 md:gap-3">
           {filtered.map((item) => (
-            <CatalogCard key={item.id} item={item} isCollected={collectedIds.has(item.id)} />
+            <CatalogCard
+              key={item.id}
+              item={item}
+              isCollected={collectedIds.has(item.id)}
+              onClick={() => setSelectedItem(item)}
+            />
           ))}
         </div>
       ) : (
@@ -189,6 +206,17 @@ export function CatalogPage() {
           <div className="text-4xl mb-3">🔍</div>
           <p className="text-sm text-on-surface-variant">沒有找到符合條件的車種</p>
         </div>
+      )}
+
+      {/* Detail modal */}
+      {selectedItem && (
+        <CarDetailModal
+          item={selectedItem}
+          isCollected={collectedIds.has(selectedItem.id)}
+          onClose={() => setSelectedItem(null)}
+          onToggleCollection={user ? handleToggleCollection : undefined}
+          collectionLoading={actionLoading}
+        />
       )}
     </div>
   )

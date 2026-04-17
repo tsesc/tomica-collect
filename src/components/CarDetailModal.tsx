@@ -106,10 +106,12 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
               <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">來源</div>
               <div className="font-medium text-on-surface">{item.source === 'official' ? '官方現行' : '社群歷史'}</div>
             </div>
-            {item.release_date && (
+            {item.release_start && (
               <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">發售日</div>
-                <div className="font-medium text-on-surface">{item.release_date}</div>
+                <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">販售期間</div>
+                <div className="font-medium text-on-surface">
+                  {item.release_start}{item.release_end ? ` ~ ${item.release_end}` : ' ~ 現行'}
+                </div>
               </div>
             )}
             {item.body_color && item.body_color.length > 0 && (

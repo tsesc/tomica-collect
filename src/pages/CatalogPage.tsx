@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { useCatalog } from '../hooks/useCatalog'
 import type { NumberRange, SourceFilter } from '../hooks/useCatalog'
 import { useCollection } from '../hooks/useCollection'
@@ -29,18 +29,28 @@ const COLLECTION_OPTIONS: { value: CollectionFilter; label: string }[] = [
   { value: 'missing', label: '未收藏' },
 ]
 
+// Generate year options from 1970 to current year
+const CURRENT_YEAR = new Date().getFullYear()
+const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => CURRENT_YEAR - i)
+
+// Decade quick picks
+const DECADES = [2020, 2010, 2000, 1990, 1980, 1970]
+
 export function CatalogPage() {
-  const [numberRange, setNumberRange] = useState<NumberRange>('1-30')
+  const [numberRange, setNumberRange] = useState<NumberRange | null>(null)
   const [source, setSource] = useState<SourceFilter>('all')
   const [collectionFilter, setCollectionFilter] = useState<CollectionFilter>('all')
+  const [year, setYear] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const { items, loading } = useCatalog({
-    numberRange: search ? undefined : numberRange,
+    numberRange: (search || year) ? undefined : (numberRange ?? '1-30'),
     source: source !== 'all' ? source : undefined,
+    year: year ?? undefined,
     search: debouncedSearch || undefined,
   })
   const { user } = useAuth()
@@ -48,10 +58,8 @@ export function CatalogPage() {
 
   const handleSearch = (value: string) => {
     setSearch(value)
-    clearTimeout((handleSearch as { timer?: ReturnType<typeof setTimeout> }).timer)
-    ;(handleSearch as { timer?: ReturnType<typeof setTimeout> }).timer = setTimeout(() => {
-      setDebouncedSearch(value)
-    }, 300)
+    clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => setDebouncedSearch(value), 300)
   }
 
   const filtered = useMemo(() => {
@@ -79,6 +87,8 @@ export function CatalogPage() {
     setActionLoading(false)
   }, [user, collectedIds, collectionItems, addToCollection, removeFromCollection])
 
+  const activeMode = search ? 'search' : year ? 'year' : 'range'
+
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 md:py-5">
       {/* Search bar */}
@@ -89,7 +99,7 @@ export function CatalogPage() {
           </svg>
           <input
             type="text"
-            placeholder="搜尋車名、型號 (例: スカイライン、No.1)"
+            placeholder="搜尋車名、型號 (例: Skyline、GT-R、No.1)"
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white text-on-surface placeholder-on-surface-variant/50 text-sm outline-none border border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/20 shadow-sm"
@@ -102,8 +112,8 @@ export function CatalogPage() {
         </div>
       </div>
 
-      {/* Number range tabs */}
-      {!search && (
+      {/* Number range tabs — hidden when searching or year filter active */}
+      {activeMode === 'range' && (
         <div className="mb-3 overflow-x-auto scrollbar-hide">
           <div className="flex gap-1.5 min-w-max">
             {NUMBER_RANGES.map((r) => (
@@ -111,7 +121,7 @@ export function CatalogPage() {
                 key={r.value}
                 onClick={() => setNumberRange(r.value)}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
-                  ${numberRange === r.value
+                  ${(numberRange ?? '1-30') === r.value
                     ? 'bg-primary text-white shadow-sm'
                     : 'bg-white text-on-surface-variant border border-outline-variant/30 hover:bg-surface-container-low'
                   }`}
@@ -125,7 +135,37 @@ export function CatalogPage() {
 
       {/* Filter chips row */}
       <div className="mb-3 overflow-x-auto scrollbar-hide">
-        <div className="flex gap-4 min-w-max items-center">
+        <div className="flex gap-3 min-w-max items-center">
+          {/* Year filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">年份</span>
+            <select
+              value={year ?? ''}
+              onChange={(e) => setYear(e.target.value ? Number(e.target.value) : null)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border appearance-none cursor-pointer pr-6 bg-no-repeat bg-[right_6px_center] bg-[length:12px]
+                ${year
+                  ? 'bg-primary/10 text-primary border-primary/30'
+                  : 'bg-white text-on-surface-variant border-outline-variant/20'
+                }`}
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235b403d' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")` }}
+            >
+              <option value="">不限</option>
+              {DECADES.map((d) => (
+                <option key={d} value={d}>{d}年代</option>
+              ))}
+              <option disabled>──────</option>
+              {YEAR_OPTIONS.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+            {year && (
+              <button onClick={() => setYear(null)} className="text-on-surface-variant/50 hover:text-on-surface text-xs">✕</button>
+            )}
+          </div>
+
+          <div className="w-px h-5 bg-outline-variant/30" />
+
+          {/* Source filter */}
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">來源</span>
             {SOURCE_OPTIONS.map((opt) => (
@@ -142,7 +182,10 @@ export function CatalogPage() {
               </button>
             ))}
           </div>
+
           <div className="w-px h-5 bg-outline-variant/30" />
+
+          {/* Collection filter */}
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">收藏</span>
             {COLLECTION_OPTIONS.map((opt) => (
@@ -165,7 +208,9 @@ export function CatalogPage() {
       {/* Stats bar */}
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="text-xs text-on-surface-variant">
-          {search ? '搜尋結果' : `No.${numberRange.split('-')[0]}–${numberRange.split('-')[1]}`}
+          {activeMode === 'search' && '搜尋結果'}
+          {activeMode === 'year' && `${year} 年`}
+          {activeMode === 'range' && `No.${(numberRange ?? '1-30').split('-')[0]}–${(numberRange ?? '1-30').split('-')[1]}`}
           <span className="mx-1.5 text-outline-variant">·</span>
           <span className="font-semibold text-on-surface">{totalCount}</span> 款
           {collectedCount > 0 && (

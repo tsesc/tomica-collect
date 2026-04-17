@@ -57,9 +57,10 @@ export function CatalogCard({ item, isCollected, onClick }: Props) {
           )}
         </div>
         <div className="text-xs font-medium leading-tight text-on-surface line-clamp-2">{displayName}</div>
-        {manufacturer && (
-          <div className="text-[10px] text-on-surface-variant truncate">{manufacturer}</div>
-        )}
+        <div className="text-[10px] text-on-surface-variant truncate">
+          {manufacturer}{manufacturer && item.release_start ? ' · ' : ''}{item.release_start?.slice(0, 4) ?? ''}
+          {item.release_end ? `–${item.release_end.slice(0, 4)}` : item.release_start ? '–' : ''}
+        </div>
       </div>
     </div>
   )

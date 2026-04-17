@@ -8,6 +8,7 @@ export type SourceFilter = 'all' | 'official' | 'community'
 interface Filters {
   numberRange?: NumberRange
   source?: SourceFilter
+  year?: number
   search?: string
 }
 
@@ -39,6 +40,15 @@ export function useCatalog(filters?: Filters) {
         query = query.in('model_number', nums)
       }
 
+      if (filters?.year) {
+        // release_start format is "YYYY-MM", filter items that were active in this year
+        // active = release_start year <= filter year AND (release_end is null OR release_end year >= filter year)
+        const yearStart = `${filters.year}-01`
+        const yearEnd = `${filters.year}-12`
+        query = query.lte('release_start', yearEnd)
+        query = query.or(`release_end.is.null,release_end.gte.${yearStart}`)
+      }
+
       if (filters?.search) {
         query = query.or(`car_name.ilike.%${filters.search}%,model_number.ilike.%${filters.search}%`)
       }
@@ -48,7 +58,7 @@ export function useCatalog(filters?: Filters) {
       setLoading(false)
     }
     fetch()
-  }, [filters?.numberRange, filters?.source, filters?.search])
+  }, [filters?.numberRange, filters?.source, filters?.year, filters?.search])
 
   return { items, loading, error }
 }

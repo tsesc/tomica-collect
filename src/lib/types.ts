@@ -19,6 +19,8 @@ export interface CatalogItem {
   image_url: string | null
   source: 'official' | 'community' | 'manual'
   variant: number | null
+  release_start: string | null
+  release_end: string | null
   metadata: Record<string, unknown>
 }
 

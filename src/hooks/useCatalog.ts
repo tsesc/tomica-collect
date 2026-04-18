@@ -56,7 +56,7 @@ export function useCatalog(filters?: Filters) {
       }
 
       if (filters?.search) {
-        query = query.or(`car_name.ilike.%${filters.search}%,model_number.ilike.%${filters.search}%`)
+        query = query.or(`car_name.ilike.%${filters.search}%,car_name_en.ilike.%${filters.search}%,model_number.ilike.%${filters.search}%,manufacturer.ilike.%${filters.search}%`)
       }
 
       if (filters?.vehicleCategory) {

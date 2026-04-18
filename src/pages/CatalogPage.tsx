@@ -15,7 +15,8 @@ const SERIES_TABS: { value: Series; label: string }[] = [
   { value: 'dream', label: 'Dream' },
 ]
 
-const NUMBER_RANGES: { value: NumberRange; label: string }[] = [
+const NUMBER_RANGES: { value: NumberRange | 'all'; label: string }[] = [
+  { value: 'all', label: '全部' },
   { value: '1-30', label: '1–30' },
   { value: '31-60', label: '31–60' },
   { value: '61-90', label: '61–90' },
@@ -68,7 +69,7 @@ const COLOR_OPTIONS: { value: string; label: string; hex: string }[] = [
 
 export function CatalogPage() {
   const [series, setSeries] = useState<Series>('regular')
-  const [numberRange, setNumberRange] = useState<NumberRange | null>(null)
+  const [numberRange, setNumberRange] = useState<NumberRange | 'all'>('all')
   const [source, setSource] = useState<SourceFilter>('all')
   const [collectionFilter, setCollectionFilter] = useState<CollectionFilter>('all')
   const [year, setYear] = useState<number | null>(null)
@@ -83,7 +84,7 @@ export function CatalogPage() {
   const isRegular = series === 'regular'
   const { items, loading } = useCatalog({
     series,
-    numberRange: (search || year || !isRegular) ? undefined : (numberRange ?? '1-30'),
+    numberRange: (search || year || !isRegular || numberRange === 'all') ? undefined : numberRange,
     source: (isRegular && source !== 'all') ? source : undefined,
     year: year ?? undefined,
     search: debouncedSearch || undefined,
@@ -175,12 +176,12 @@ export function CatalogPage() {
                 key={r.value}
                 onClick={() => setNumberRange(r.value)}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
-                  ${(numberRange ?? '1-30') === r.value
+                  ${numberRange === r.value
                     ? 'bg-primary text-white shadow-sm'
                     : 'bg-white text-on-surface-variant border border-outline-variant/30 hover:bg-surface-container-low'
                   }`}
               >
-                No.{r.label}
+                {r.value === 'all' ? r.label : `No.${r.label}`}
               </button>
             ))}
           </div>
@@ -313,7 +314,7 @@ export function CatalogPage() {
         <div className="text-xs text-on-surface-variant">
           {activeMode === 'search' && '搜尋結果'}
           {activeMode === 'year' && `${year} 年`}
-          {activeMode === 'range' && `No.${(numberRange ?? '1-30').split('-')[0]}–${(numberRange ?? '1-30').split('-')[1]}`}
+          {activeMode === 'range' && (numberRange === 'all' ? '全部' : `No.${numberRange.split('-')[0]}–${numberRange.split('-')[1]}`)}
           <span className="mx-1.5 text-outline-variant">·</span>
           <span className="font-semibold text-on-surface">{totalCount}</span> 款
           {collectedCount > 0 && (

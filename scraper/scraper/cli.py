@@ -17,6 +17,8 @@ from .cars import scrape_cars_series
 from .dedup import dedup_report, enrich_catalog
 from .enrich import enrich_batch
 from .classify import classify_batch
+from .color_extract import extract_colors_batch
+from .image_search import batch_search_images
 from .output import write_json, write_sql_seed
 
 
@@ -238,6 +240,76 @@ def main():
         print("Done!")
         return
 
+    # scrape extract-colors — pixel-based color extraction from images (no AI)
+    if len(args) >= 1 and args[0] == "extract-colors":
+        import os
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        anon_key = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodnRpcGZteGZkbHBvbGNrdWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NjQzNjgsImV4cCI6MjA5MTU0MDM2OH0.MJPwUw6ABTthWKRzmQB8Enh0BF1UMbdJUaKhpHIZ_c0")
+        api_key = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or anon_key
+
+        import httpx as httpx_sync
+        headers = {"apikey": api_key, "Authorization": f"Bearer {api_key}"}
+        base = f"{supabase_url}/rest/v1"
+
+        # Fetch items with images where color is unknown or missing
+        print("Fetching items with images needing color extraction...")
+        all_items: list[dict] = []
+        offset = 0
+        while True:
+            resp = httpx_sync.get(
+                f"{base}/tomica_catalog?image_url=not.is.null"
+                f"&select=id,model_number,car_name,image_url,attributes"
+                f"&order=model_number&offset={offset}&limit=1000",
+                headers=headers, timeout=30,
+            )
+            batch = resp.json()
+            if not batch:
+                break
+            # Filter: no attributes, or primary_color is "unknown"
+            for item in batch:
+                attrs = item.get("attributes")
+                if not attrs or attrs.get("primary_color") == "unknown":
+                    all_items.append(item)
+            offset += len(batch)
+            if len(batch) < 1000:
+                break
+
+        print(f"Found {len(all_items)} items needing color extraction")
+        if not all_items:
+            print("All items already have colors!")
+            return
+
+        # Extract colors from images (no AI, uses Pillow)
+        results = asyncio.run(extract_colors_batch(all_items, concurrency=20))
+        print(f"Extracted colors for {len(results)} / {len(all_items)} items")
+
+        # Generate SQL to update attributes with new colors
+        sql_lines = []
+        for item_id, color_data in results.items():
+            # Find original item to merge attributes
+            orig = next((i for i in all_items if i["id"] == item_id), None)
+            if not orig:
+                continue
+            attrs = orig.get("attributes") or {}
+            attrs["primary_color"] = color_data["primary_color"]
+            attrs["secondary_color"] = color_data["secondary_color"]
+            attrs_json = json.dumps(attrs).replace("'", "''")
+            sql_lines.append(f"UPDATE tomica_catalog SET attributes = '{attrs_json}'::jsonb WHERE id = '{item_id}';")
+
+        output_path = data_dir / "color_updates.sql"
+        output_path.write_text("\n".join(sql_lines))
+        print(f"SQL saved: {len(sql_lines)} statements → {output_path}")
+
+        # Show color distribution
+        from collections import Counter
+        color_dist = Counter(r["primary_color"] for r in results.values())
+        print("\nColor distribution:")
+        for color, count in color_dist.most_common(15):
+            print(f"  {color:12s} {count:>4d} {'█' * min(count // 2, 40)}")
+
+        print("Done!")
+        return
+
     # scrape enrich-attributes — batch AI attribute extraction via Gemini Flash
     if len(args) >= 1 and args[0] == "enrich-attributes":
         import os
@@ -376,10 +448,70 @@ def main():
     elif len(args) >= 1 and args[0] == "dedup":
         report = dedup_report(data_dir)
         print(report)
-        # Also save to file
         output_path = data_dir / "dedup_report.txt"
         output_path.write_text(report)
         print(f"\nReport saved to {output_path}")
+    elif len(args) >= 1 and args[0] == "find-images":
+        import os
+        import logging
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            print("Error: GEMINI_API_KEY env var is required")
+            sys.exit(1)
+
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
+        anon_key = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodnRpcGZteGZkbHBvbGNrdWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NjQzNjgsImV4cCI6MjA5MTU0MDM2OH0.MJPwUw6ABTthWKRzmQB8Enh0BF1UMbdJUaKhpHIZ_c0")
+        db_key = supabase_key or anon_key
+        headers = {"apikey": db_key, "Authorization": f"Bearer {db_key}", "Content-Type": "application/json"}
+        base = f"{supabase_url}/rest/v1"
+
+        # Determine batch size
+        limit = int(args[1]) if len(args) > 1 else 20
+        print(f"Finding images for up to {limit} items with no image...")
+
+        import httpx as httpx_sync
+        # Fetch items missing images
+        resp = httpx_sync.get(
+            f"{base}/tomica_catalog?image_url=is.null&select=id,model_number,car_name,variant&order=model_number&limit={limit}",
+            headers=headers, timeout=30,
+        )
+        items = resp.json()
+        print(f"Fetched {len(items)} items needing images")
+
+        if not items:
+            print("All items have images!")
+            return
+
+        # Run search
+        results = asyncio.run(batch_search_images(items, api_key, concurrency=5))
+        print(f"\nFound images for {len(results)}/{len(items)} items")
+
+        # Write to DB if service key available
+        if supabase_key and results:
+            print("Writing to Supabase...")
+            write_headers = {**headers, "Prefer": "return=minimal"}
+            success = 0
+            for item_id, img_url in results.items():
+                try:
+                    r = httpx_sync.patch(
+                        f"{base}/tomica_catalog?id=eq.{item_id}",
+                        headers=write_headers,
+                        json={"image_url": img_url},
+                        timeout=10,
+                    )
+                    r.raise_for_status()
+                    success += 1
+                except Exception as e:
+                    print(f"  Failed {item_id}: {e}")
+            print(f"Updated {success} items in Supabase")
+        elif results:
+            # Save to file
+            output_path = data_dir / "found_images.json"
+            output_path.write_text(json.dumps(results, indent=2))
+            print(f"Saved to {output_path} (set SUPABASE_SERVICE_ROLE_KEY to write to DB)")
     else:
         print("Scraping current Tomica regular series...")
         items = asyncio.run(scrape_regular_series())

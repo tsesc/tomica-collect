@@ -122,6 +122,44 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
                 <div className="font-medium text-on-surface">{item.body_color.join(', ')}</div>
               </div>
             )}
+            {item.attributes && (
+              <>
+                <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車型</div>
+                  <div className="font-medium text-on-surface">
+                    {{ car: '轎車', truck: '卡車', bus: '巴士', emergency: '緊急車輛', construction: '工程車', motorcycle: '機車', aircraft: '飛機', boat: '船', train: '列車', fantasy: '造型車' }[item.attributes.vehicle_category] ?? item.attributes.vehicle_category}
+                    {' / '}
+                    {{ sedan: '四門', suv: 'SUV', coupe: '雙門', wagon: '旅行', van: '箱型', pickup: '皮卡', convertible: '敞篷', hatchback: '掀背', cab_over: '平頭', special: '特殊' }[item.attributes.body_style] ?? item.attributes.body_style}
+                  </div>
+                </div>
+                <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車色</div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded-full border border-outline-variant/30 inline-block" style={{ backgroundColor: item.attributes.primary_color }} />
+                    <span className="font-medium text-on-surface">{item.attributes.primary_color}</span>
+                    {item.attributes.secondary_color && (
+                      <>
+                        <span className="text-on-surface-variant">/</span>
+                        <span className="w-4 h-4 rounded-full border border-outline-variant/30 inline-block" style={{ backgroundColor: item.attributes.secondary_color }} />
+                        <span className="font-medium text-on-surface">{item.attributes.secondary_color}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {item.attributes.features.length > 0 && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2 col-span-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-1">特徵</div>
+                    <div className="flex flex-wrap gap-1">
+                      {item.attributes.features.map((f) => (
+                        <span key={f} className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded-full">
+                          {{ police_light: '警燈', ladder: '梯子', wing: '翅膀', blade: '刀片', crane: '吊臂', antenna: '天線', decal: '貼紙', open_top: '開頂', tank: '油罐', trailer: '拖車' }[f] ?? f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Collection action button */}

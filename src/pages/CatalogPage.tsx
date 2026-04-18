@@ -44,6 +44,28 @@ const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1970 + 1 }, (_, i) => C
 // Decade quick picks
 const DECADES = [2020, 2010, 2000, 1990, 1980, 1970]
 
+const VEHICLE_CATEGORIES: { value: string; label: string }[] = [
+  { value: 'car', label: '轎車' },
+  { value: 'emergency', label: '緊急' },
+  { value: 'truck', label: '卡車' },
+  { value: 'bus', label: '巴士' },
+  { value: 'construction', label: '工程' },
+  { value: 'motorcycle', label: '機車' },
+  { value: 'train', label: '列車' },
+  { value: 'fantasy', label: '造型' },
+]
+
+const COLOR_OPTIONS: { value: string; label: string; hex: string }[] = [
+  { value: 'red', label: '紅', hex: '#DC2626' },
+  { value: 'blue', label: '藍', hex: '#2563EB' },
+  { value: 'white', label: '白', hex: '#F9FAFB' },
+  { value: 'black', label: '黑', hex: '#1F2937' },
+  { value: 'silver', label: '銀', hex: '#9CA3AF' },
+  { value: 'yellow', label: '黃', hex: '#EAB308' },
+  { value: 'green', label: '綠', hex: '#16A34A' },
+  { value: 'orange', label: '橙', hex: '#EA580C' },
+]
+
 export function CatalogPage() {
   const [series, setSeries] = useState<Series>('regular')
   const [numberRange, setNumberRange] = useState<NumberRange | null>(null)
@@ -54,6 +76,8 @@ export function CatalogPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [vehicleCategory, setVehicleCategory] = useState<string | null>(null)
+  const [selectedColors, setSelectedColors] = useState<string[]>([])
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const isRegular = series === 'regular'
@@ -63,6 +87,8 @@ export function CatalogPage() {
     source: (isRegular && source !== 'all') ? source : undefined,
     year: year ?? undefined,
     search: debouncedSearch || undefined,
+    vehicleCategory: vehicleCategory ?? undefined,
+    primaryColors: selectedColors.length > 0 ? selectedColors : undefined,
   })
   const { user } = useAuth()
   const { collectedIds, addToCollection, removeFromCollection, items: collectionItems } = useCollection()
@@ -230,6 +256,52 @@ export function CatalogPage() {
                   }`}
               >
                 {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Attribute filter chips */}
+      <div className="mb-3 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-3 min-w-max items-center">
+          {/* Vehicle category */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">車型</span>
+            {VEHICLE_CATEGORIES.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setVehicleCategory(vehicleCategory === opt.value ? null : opt.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
+                  ${vehicleCategory === opt.value
+                    ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                    : 'bg-white text-on-surface-variant border border-outline-variant/20 hover:bg-surface-container-low'
+                  }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="w-px h-5 bg-outline-variant/30" />
+
+          {/* Color filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">顏色</span>
+            {COLOR_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSelectedColors((prev) =>
+                  prev.includes(opt.value) ? prev.filter((c) => c !== opt.value) : [...prev, opt.value]
+                )}
+                className={`w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center
+                  ${selectedColors.includes(opt.value) ? 'border-primary scale-110' : 'border-outline-variant/30'}`}
+                style={{ backgroundColor: opt.hex }}
+                title={opt.label}
+              >
+                {selectedColors.includes(opt.value) && (
+                  <span className={`text-[10px] font-bold ${opt.value === 'white' || opt.value === 'yellow' ? 'text-on-surface' : 'text-white'}`}>✓</span>
+                )}
               </button>
             ))}
           </div>

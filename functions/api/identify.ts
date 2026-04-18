@@ -114,19 +114,66 @@ export function matchCandidates(
     .map((item) => {
       let score = 0
       const reasons: string[] = []
+      const attrs = item.attributes as Record<string, unknown> | null
+
+      // Manufacturer match (0.20)
       const fm = ((features.manufacturer as string) ?? '').toLowerCase()
       const im = ((item.manufacturer as string) ?? '').toLowerCase()
-      if (fm && im && im.includes(fm)) { score += 0.25; reasons.push(`Manufacturer match: ${item.manufacturer}`) }
+      if (fm && im && im.includes(fm)) { score += 0.20; reasons.push(`Manufacturer: ${item.manufacturer}`) }
+
+      // Car name match (0.30)
       const fn = ((features.car_name as string) ?? '').toLowerCase()
       const iname = ((item.car_name as string) ?? '').toLowerCase()
       const inameEn = ((item.car_name_en as string) ?? '').toLowerCase()
-      if (fn && (iname.includes(fn) || inameEn.includes(fn))) { score += 0.35; reasons.push(`Name match: ${item.car_name}`) }
-      const fc = ((features.body_color as string) ?? '').toLowerCase()
-      const ic = ((item.body_color as string[]) ?? []).map((c: string) => c.toLowerCase())
-      if (fc && ic.some((c: string) => c.includes(fc) || fc.includes(c))) { score += 0.2; reasons.push(`Color match: ${ic.join(', ')}`) }
-      const ft = ((features.vehicle_type as string) ?? '').toLowerCase()
-      const it2 = ((item.vehicle_type as string) ?? '').toLowerCase()
-      if (ft && it2 && ft === it2) { score += 0.15; reasons.push(`Vehicle type match: ${item.vehicle_type}`) }
+      if (fn && (iname.includes(fn) || inameEn.includes(fn))) { score += 0.30; reasons.push(`Name: ${item.car_name}`) }
+
+      if (attrs) {
+        // Primary color match (0.15)
+        const fColor = ((features.primary_color as string) ?? (features.body_color as string) ?? '').toLowerCase()
+        const iColor = ((attrs.primary_color as string) ?? '').toLowerCase()
+        const iColor2 = ((attrs.secondary_color as string) ?? '').toLowerCase()
+        if (fColor && (iColor.includes(fColor) || fColor.includes(iColor) || iColor2.includes(fColor))) {
+          score += 0.15; reasons.push(`Color: ${iColor}`)
+        }
+
+        // Vehicle category match (0.10)
+        const fCat = ((features.vehicle_category as string) ?? (features.vehicle_type as string) ?? '').toLowerCase()
+        const iCat = ((attrs.vehicle_category as string) ?? '').toLowerCase()
+        if (fCat && iCat && fCat === iCat) { score += 0.10; reasons.push(`Category: ${iCat}`) }
+
+        // Body style match (0.08)
+        const fStyle = ((features.body_style as string) ?? '').toLowerCase()
+        const iStyle = ((attrs.body_style as string) ?? '').toLowerCase()
+        if (fStyle && iStyle && fStyle === iStyle) { score += 0.08; reasons.push(`Style: ${iStyle}`) }
+
+        // Features overlap (0.10)
+        const fFeats = (features.features as string[]) ?? []
+        const iFeats = (attrs.features as string[]) ?? []
+        if (fFeats.length > 0 && iFeats.length > 0) {
+          const overlap = fFeats.filter((f: string) => iFeats.includes(f))
+          if (overlap.length > 0) { score += 0.10; reasons.push(`Features: ${overlap.join(', ')}`) }
+        }
+
+        // Size class match (0.05)
+        const fSize = ((features.size_class as string) ?? '').toLowerCase()
+        const iSize = ((attrs.size_class as string) ?? '').toLowerCase()
+        if (fSize && iSize && fSize === iSize) { score += 0.05; reasons.push(`Size: ${iSize}`) }
+
+        // Era style match (0.02)
+        const fEra = ((features.era_style as string) ?? '').toLowerCase()
+        const iEra = ((attrs.era_style as string) ?? '').toLowerCase()
+        if (fEra && iEra && fEra === iEra) { score += 0.02; reasons.push(`Era: ${iEra}`) }
+      } else {
+        // Fallback for items without attributes
+        const fc = ((features.body_color as string) ?? '').toLowerCase()
+        const ic = ((item.body_color as string[]) ?? []).map((c: string) => c.toLowerCase())
+        if (fc && ic.some((c: string) => c.includes(fc) || fc.includes(c))) { score += 0.15; reasons.push(`Color: ${ic.join(', ')}`) }
+
+        const ft = ((features.vehicle_type as string) ?? '').toLowerCase()
+        const it2 = ((item.vehicle_type as string) ?? '').toLowerCase()
+        if (ft && it2 && ft === it2) { score += 0.10; reasons.push(`Type: ${item.vehicle_type}`) }
+      }
+
       return { item, score, reasons }
     })
     .filter((r) => r.score > 0.1)

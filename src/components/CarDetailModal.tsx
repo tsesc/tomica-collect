@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import type { CatalogItem } from '../lib/types'
+import { getItemCode } from '../lib/types'
 import { translateCarName } from '../lib/translate'
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
 
 export function CarDetailModal({ item, isCollected, onClose, onToggleCollection, collectionLoading }: Props) {
   const { displayName, manufacturer, vehicleType } = translateCarName(item.car_name, item.manufacturer)
-  const modelNum = item.model_number.replace('No.', '#')
+  const code = getItemCode(item)
 
   // Close on Escape
   useEffect(() => {
@@ -63,12 +64,9 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
         <div className="p-5 space-y-4">
           {/* Header */}
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-lg font-bold text-primary font-display">{modelNum}</span>
-              {item.variant != null && (
-                <span className="px-2 py-0.5 bg-on-surface/10 text-on-surface text-xs font-medium rounded">第{item.variant}代</span>
-              )}
-              {item.source === 'official' && (
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-lg font-bold text-primary font-display font-mono tracking-tight">{code}</span>
+              {item.source === 'official' && item.series === 'regular' && (
                 <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded">現行</span>
               )}
               {item.source === 'community' && (
@@ -86,6 +84,10 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
 
           {/* Details grid */}
           <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="bg-surface-container-low rounded-lg px-3 py-2">
+              <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">產品代號</div>
+              <div className="font-medium text-on-surface font-mono">{code}</div>
+            </div>
             {manufacturer && (
               <div className="bg-surface-container-low rounded-lg px-3 py-2">
                 <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">製造商</div>
@@ -100,7 +102,7 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
             )}
             <div className="bg-surface-container-low rounded-lg px-3 py-2">
               <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">系列</div>
-              <div className="font-medium text-on-surface">{item.series === 'regular' ? '常規' : item.series}</div>
+              <div className="font-medium text-on-surface">{{ regular: '常規', premium: 'Premium', premium_unlimited: 'Premium Unlimited', limited_vintage: 'Limited Vintage', dream: 'Dream' }[item.series] ?? item.series}</div>
             </div>
             <div className="bg-surface-container-low rounded-lg px-3 py-2">
               <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">來源</div>

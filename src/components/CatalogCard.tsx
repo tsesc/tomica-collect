@@ -1,4 +1,5 @@
 import type { CatalogItem } from '../lib/types'
+import { getItemCode } from '../lib/types'
 import { translateCarName } from '../lib/translate'
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
 
 export function CatalogCard({ item, isCollected, onClick }: Props) {
   const isHistorical = item.source === 'community'
-  const modelNum = item.model_number.replace('No.', '#')
+  const code = getItemCode(item)
   const { displayName, manufacturer } = translateCarName(item.car_name, item.manufacturer)
 
   return (
@@ -22,13 +23,6 @@ export function CatalogCard({ item, isCollected, onClick }: Props) {
       {/* Collection badge */}
       {isCollected && (
         <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-success text-white rounded-full flex items-center justify-center text-[10px] font-bold z-10 shadow-sm">✓</div>
-      )}
-
-      {/* Source / variant badge */}
-      {isHistorical && item.variant != null && (
-        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/60 text-white text-[10px] font-medium rounded z-10">
-          第{item.variant}代
-        </div>
       )}
 
       {/* Image */}
@@ -50,9 +44,9 @@ export function CatalogCard({ item, isCollected, onClick }: Props) {
 
       {/* Info */}
       <div className="p-2 space-y-0.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-bold text-primary font-display">{modelNum}</span>
-          {item.source === 'official' && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-bold text-primary font-display font-mono tracking-tight">{code}</span>
+          {item.source === 'official' && item.series === 'regular' && (
             <span className="text-[8px] px-1 py-px bg-primary/10 text-primary rounded font-medium">現行</span>
           )}
         </div>

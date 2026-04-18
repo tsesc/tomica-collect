@@ -4,6 +4,17 @@ export type Condition = 'mint' | 'good' | 'fair' | 'poor'
 export type AiProvider = 'openai' | 'gemini' | 'claude'
 export type InputType = 'box_front' | 'box_back' | 'loose' | 'chassis'
 
+/** Build a unique display code for a catalog item.
+ *  Regular with variant: "No.1-7", TLV: "LV-86h", Premium: "TP.08", etc. */
+export function getItemCode(item: { model_number: string; variant?: number | null; series?: string }): string {
+  // TLV, Premium, Unlimited, Dream — model_number is already unique
+  if (!item.model_number.startsWith('No.') || !item.variant) {
+    return item.model_number
+  }
+  // Regular with variant: "No.1-7"
+  return `${item.model_number}-${item.variant}`
+}
+
 export interface CatalogItem {
   id: string
   model_number: string

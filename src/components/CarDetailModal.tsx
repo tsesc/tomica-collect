@@ -3,6 +3,22 @@ import type { CatalogItem } from '../lib/types'
 import { getItemCode } from '../lib/types'
 import { translateCarName } from '../lib/translate'
 
+const COLOR_ZH: Record<string, string> = {
+  white: '白色', black: '黑色', red: '紅色', blue: '藍色', silver: '銀色',
+  yellow: '黃色', green: '綠色', orange: '橙色', gold: '金色', gray: '灰色',
+  grey: '灰色', brown: '棕色', pink: '粉紅', purple: '紫色', beige: '米色',
+  navy: '深藍', cream: '奶油色', chrome: '鍍鉻', copper: '銅色', maroon: '栗色',
+}
+const COLOR_HEX: Record<string, string> = {
+  white: '#F9FAFB', black: '#1F2937', red: '#DC2626', blue: '#2563EB',
+  silver: '#9CA3AF', yellow: '#EAB308', green: '#16A34A', orange: '#EA580C',
+  gold: '#D97706', gray: '#6B7280', grey: '#6B7280', brown: '#92400E',
+  pink: '#EC4899', purple: '#7C3AED', beige: '#D2B48C', navy: '#1E3A5F',
+  cream: '#FFFDD0', chrome: '#C0C0C0', copper: '#B87333', maroon: '#800000',
+}
+function colorToZh(c: string): string { return COLOR_ZH[c.toLowerCase()] ?? c }
+function colorToHex(c: string): string { return COLOR_HEX[c.toLowerCase()] ?? c }
+
 interface Props {
   item: CatalogItem
   isCollected: boolean
@@ -125,34 +141,64 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
             {item.attributes && (
               <>
                 <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車型</div>
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車型分類</div>
                   <div className="font-medium text-on-surface">
                     {{ car: '轎車', truck: '卡車', bus: '巴士', emergency: '緊急車輛', construction: '工程車', motorcycle: '機車', aircraft: '飛機', boat: '船', train: '列車', fantasy: '造型車' }[item.attributes.vehicle_category] ?? item.attributes.vehicle_category}
-                    {' / '}
-                    {{ sedan: '四門', suv: 'SUV', coupe: '雙門', wagon: '旅行', van: '箱型', pickup: '皮卡', convertible: '敞篷', hatchback: '掀背', cab_over: '平頭', special: '特殊' }[item.attributes.body_style] ?? item.attributes.body_style}
+                  </div>
+                </div>
+                <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車身型式</div>
+                  <div className="font-medium text-on-surface">
+                    {{ sedan: '四門轎車', suv: 'SUV', coupe: '雙門跑車', wagon: '旅行車', van: '箱型車', pickup: '皮卡', convertible: '敞篷', hatchback: '掀背', cab_over: '平頭車', special: '特殊' }[item.attributes.body_style] ?? item.attributes.body_style}
                   </div>
                 </div>
                 <div className="bg-surface-container-low rounded-lg px-3 py-2">
                   <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車色</div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full border border-outline-variant/30 inline-block" style={{ backgroundColor: item.attributes.primary_color }} />
-                    <span className="font-medium text-on-surface">{item.attributes.primary_color}</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="w-5 h-5 rounded-full border border-outline-variant/30 inline-block shadow-sm" style={{ backgroundColor: colorToHex(item.attributes.primary_color) }} />
+                    <span className="font-medium text-on-surface">{colorToZh(item.attributes.primary_color)}</span>
                     {item.attributes.secondary_color && (
                       <>
-                        <span className="text-on-surface-variant">/</span>
-                        <span className="w-4 h-4 rounded-full border border-outline-variant/30 inline-block" style={{ backgroundColor: item.attributes.secondary_color }} />
-                        <span className="font-medium text-on-surface">{item.attributes.secondary_color}</span>
+                        <span className="text-on-surface-variant/50 mx-0.5">/</span>
+                        <span className="w-5 h-5 rounded-full border border-outline-variant/30 inline-block shadow-sm" style={{ backgroundColor: colorToHex(item.attributes.secondary_color) }} />
+                        <span className="font-medium text-on-surface">{colorToZh(item.attributes.secondary_color)}</span>
                       </>
                     )}
                   </div>
                 </div>
+                <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">輪子</div>
+                  <div className="font-medium text-on-surface">{item.attributes.wheel_count} 輪</div>
+                </div>
+                <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車身大小</div>
+                  <div className="font-medium text-on-surface">
+                    {{ small: '小型', medium: '中型', large: '大型', extra_large: '超大型' }[item.attributes.size_class] ?? item.attributes.size_class}
+                  </div>
+                </div>
+                <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">年代風格</div>
+                  <div className="font-medium text-on-surface">
+                    {{ classic: '經典', modern: '現代', futuristic: '未來', retro: '復古' }[item.attributes.era_style] ?? item.attributes.era_style}
+                  </div>
+                </div>
+                <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車窗</div>
+                  <div className="font-medium text-on-surface">
+                    {{ standard: '標準', none: '無', panoramic: '全景', cab: '駕駛室' }[item.attributes.window_style] ?? item.attributes.window_style}
+                  </div>
+                </div>
+                <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">塗裝</div>
+                  <div className="font-medium text-on-surface">{item.attributes.has_livery ? '有塗裝' : '素色'}</div>
+                </div>
                 {item.attributes.features.length > 0 && (
                   <div className="bg-surface-container-low rounded-lg px-3 py-2 col-span-2">
-                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-1">特徵</div>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-1">特殊配件</div>
+                    <div className="flex flex-wrap gap-1.5">
                       {item.attributes.features.map((f) => (
-                        <span key={f} className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-medium rounded-full">
-                          {{ police_light: '警燈', ladder: '梯子', wing: '翅膀', blade: '刀片', crane: '吊臂', antenna: '天線', decal: '貼紙', open_top: '開頂', tank: '油罐', trailer: '拖車' }[f] ?? f}
+                        <span key={f} className="px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-medium rounded-full">
+                          {{ police_light: '🚨 警燈', ladder: '🪜 梯子', wing: '翼', blade: '刀片', crane: '🏗️ 吊臂', antenna: '📡 天線', decal: '🎨 貼紙', open_top: '☀️ 開頂', tank: '🛢️ 油罐', trailer: '🚛 拖車', bucket: '🪣 鏟斗', hose: '🔧 管線', plow: '除雪鏟', box_body: '📦 箱體', flatbed: '平板', drill: '🔩 鑽頭' }[f] ?? f}
                         </span>
                       ))}
                     </div>

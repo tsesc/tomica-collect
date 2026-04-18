@@ -248,10 +248,10 @@ async def enrich_batch(
         async with sem:
             attrs = await analyze_image(client, api_key, image_url)
 
-            # Retry once on failure
+            # Retry once on failure with longer backoff
             if attrs is None:
                 logger.info("Retrying %s ...", label)
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
                 attrs = await analyze_image(client, api_key, image_url)
 
             if attrs is not None:
@@ -259,6 +259,9 @@ async def enrich_batch(
                 logger.info("OK  %s", label)
             else:
                 logger.warning("FAIL %s", label)
+
+            # Rate limit: Gemini free tier is 15 RPM
+            await asyncio.sleep(4)
 
     async with httpx.AsyncClient() as client:
         tasks = [_process(client, item) for item in items]

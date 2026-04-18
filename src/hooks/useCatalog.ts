@@ -73,8 +73,19 @@ export function useCatalog(filters?: Filters) {
         }
       }
 
-      const { data, error: err } = await query.order('model_number').order('variant', { ascending: true, nullsFirst: false })
-      if (err) { setError(err.message) } else { setItems(data as CatalogItem[]) }
+      const { data, error: err } = await query
+      if (err) {
+        setError(err.message)
+      } else {
+        const sorted = (data as CatalogItem[]).sort((a, b) => {
+          const numA = parseInt(a.model_number.replace(/\D/g, ''), 10) || 0
+          const numB = parseInt(b.model_number.replace(/\D/g, ''), 10) || 0
+          if (numA !== numB) return numA - numB
+          // Secondary sort by variant
+          return (a.variant ?? 0) - (b.variant ?? 0)
+        })
+        setItems(sorted)
+      }
       setLoading(false)
     }
     fetch()

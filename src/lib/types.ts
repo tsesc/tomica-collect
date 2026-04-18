@@ -15,6 +15,19 @@ export function getItemCode(item: { model_number: string; variant?: number | nul
   return `${item.model_number}-${item.variant}`
 }
 
+export interface VehicleAttributes {
+  vehicle_category: 'car' | 'truck' | 'bus' | 'emergency' | 'construction' | 'motorcycle' | 'aircraft' | 'boat' | 'train' | 'fantasy'
+  body_style: 'sedan' | 'suv' | 'coupe' | 'wagon' | 'van' | 'pickup' | 'convertible' | 'hatchback' | 'cab_over' | 'special'
+  primary_color: string
+  secondary_color: string | null
+  wheel_count: number
+  size_class: 'small' | 'medium' | 'large' | 'extra_large'
+  features: string[]
+  era_style: 'classic' | 'modern' | 'futuristic' | 'retro'
+  has_livery: boolean
+  window_style: 'standard' | 'none' | 'panoramic' | 'cab'
+}
+
 export interface CatalogItem {
   id: string
   model_number: string
@@ -32,6 +45,7 @@ export interface CatalogItem {
   variant: number | null
   release_start: string | null
   release_end: string | null
+  attributes: VehicleAttributes | null
   metadata: Record<string, unknown>
 }
 

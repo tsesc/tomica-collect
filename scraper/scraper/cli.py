@@ -14,7 +14,8 @@ from .funbox import scrape_funbox
 from .tlv import scrape_tlv_series
 from .unlimited import scrape_unlimited_series
 from .cars import scrape_cars_series
-from .dedup import dedup_report
+from .dedup import dedup_report, enrich_catalog
+from .enrich import enrich_batch
 from .output import write_json, write_sql_seed
 
 
@@ -152,6 +153,81 @@ def main():
     # scrape recover <catalog|history>
     if len(args) >= 2 and args[0] == "recover":
         _cmd_recover(data_dir, args[1])
+        return
+
+    # scrape enrich — fill missing catalog fields from other sources
+    if len(args) >= 1 and args[0] == "enrich":
+        _backup(data_dir, "catalog.json")
+        changes = enrich_catalog(data_dir)
+        if changes:
+            print(f"Enriched {len(changes)} items in catalog.json:")
+            for c in changes:
+                print(f"  {c['model_number']:8s} {c['field']} ← [{c['source']}] {c['new'][:70]}")
+        else:
+            print("Nothing to enrich — all catalog items already have data.")
+        return
+
+    # scrape enrich-attributes — batch AI attribute extraction via Gemini Flash
+    if len(args) >= 1 and args[0] == "enrich-attributes":
+        import os
+
+        api_key = os.environ.get("GEMINI_API_KEY")
+        supabase_url = os.environ.get("SUPABASE_URL")
+        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+        if not api_key:
+            print("Error: GEMINI_API_KEY env var is required")
+            sys.exit(1)
+        if not supabase_url or not service_key:
+            print("Error: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars are required")
+            sys.exit(1)
+
+        import httpx
+
+        # Fetch items needing enrichment
+        print("Fetching catalog items needing attribute enrichment...")
+        headers = {
+            "apikey": service_key,
+            "Authorization": f"Bearer {service_key}",
+            "Content-Type": "application/json",
+        }
+        resp = httpx.get(
+            f"{supabase_url}/rest/v1/tomica_catalog"
+            "?image_url=not.is.null&attributes=is.null"
+            "&select=id,model_number,car_name,image_url",
+            headers=headers,
+            timeout=30.0,
+        )
+        resp.raise_for_status()
+        items = resp.json()
+        print(f"Found {len(items)} items to enrich")
+
+        if not items:
+            print("Nothing to enrich — all items already have attributes.")
+            return
+
+        # Run batch enrichment
+        results = asyncio.run(enrich_batch(items, api_key))
+        print(f"\nExtracted attributes for {len(results)}/{len(items)} items")
+
+        # Write results back to Supabase
+        success = 0
+        failed = 0
+        for item_id, attrs in results.items():
+            try:
+                patch_resp = httpx.patch(
+                    f"{supabase_url}/rest/v1/tomica_catalog?id=eq.{item_id}",
+                    headers=headers,
+                    json={"attributes": attrs},
+                    timeout=30.0,
+                )
+                patch_resp.raise_for_status()
+                success += 1
+            except httpx.HTTPError as e:
+                print(f"  Failed to update {item_id}: {e}")
+                failed += 1
+
+        print(f"\nDone! Updated: {success}, Failed: {failed}, Skipped: {len(items) - len(results)}")
         return
 
     if len(args) >= 1 and args[0] == "history":

@@ -11,6 +11,9 @@ interface Filters {
   source?: SourceFilter
   year?: number
   search?: string
+  vehicleCategory?: string
+  primaryColors?: string[]
+  features?: string[]
 }
 
 /** Map range label → model_number patterns to match */
@@ -56,12 +59,26 @@ export function useCatalog(filters?: Filters) {
         query = query.or(`car_name.ilike.%${filters.search}%,model_number.ilike.%${filters.search}%`)
       }
 
+      if (filters?.vehicleCategory) {
+        query = query.eq('attributes->>vehicle_category', filters.vehicleCategory)
+      }
+
+      if (filters?.primaryColors && filters.primaryColors.length > 0) {
+        query = query.in('attributes->>primary_color', filters.primaryColors)
+      }
+
+      if (filters?.features && filters.features.length > 0) {
+        for (const feat of filters.features) {
+          query = query.contains('attributes->features', JSON.stringify([feat]))
+        }
+      }
+
       const { data, error: err } = await query.order('model_number').order('variant', { ascending: true, nullsFirst: false })
       if (err) { setError(err.message) } else { setItems(data as CatalogItem[]) }
       setLoading(false)
     }
     fetch()
-  }, [filters?.series, filters?.numberRange, filters?.source, filters?.year, filters?.search])
+  }, [filters?.series, filters?.numberRange, filters?.source, filters?.year, filters?.search, filters?.vehicleCategory, filters?.primaryColors, filters?.features])
 
   return { items, loading, error }
 }

@@ -79,7 +79,12 @@ async def scrape_number_history(client: httpx.AsyncClient, number: int) -> list[
             if len(dates) >= 2:
                 current_item["release_end"] = f"{dates[1][0]}-{dates[1][1]}"
 
-    # Extract images: alt text contains "No.X-Y" pattern (dict lookup, O(n))
+    # Extract images: match variant from alt text or src URL
+    # Alt text patterns:
+    #   "トミカNo.1-6日産..." → No.X-Y format
+    #   "トミカ1-3-3日野..."  → bare number format (X-Y or X-Y-N)
+    # Src URL patterns:
+    #   "tomica1-6_NissanXtrail..." → embedded in filename
     variant_map = {item["variant"]: item for item in items}
 
     for img in soup.find_all("img"):
@@ -88,14 +93,34 @@ async def scrape_number_history(client: httpx.AsyncClient, number: int) -> list[
 
         if not src or "pagespeed_static" in src or "data:image" in src:
             continue
-        if "thumbnail" in src or "logo" in src:
+        if "thumbnail" in src or "logo" in src or "icon" in src or "avatar" in src:
             continue
+        if "drum" in src or "cymbal" in src:
+            continue  # cochume.com also has drum content
 
+        # Try multiple patterns to extract variant number
+        img_variant = None
+
+        # Pattern 1: "No.X-Y" in alt text
         alt_match = re.search(r'No\.(\d+)-(\d+)', alt)
-        if not alt_match:
+        if alt_match:
+            img_variant = int(alt_match.group(2))
+
+        # Pattern 2: "トミカX-Y" or "tomica X-Y" in alt text (no "No." prefix)
+        if img_variant is None:
+            alt_match2 = re.search(r'(?:トミカ|tomica)\s*(\d+)-(\d+)', alt, re.IGNORECASE)
+            if alt_match2 and int(alt_match2.group(1)) == number:
+                img_variant = int(alt_match2.group(2))
+
+        # Pattern 3: "tomicaX-Y_" in src URL filename
+        if img_variant is None:
+            src_match = re.search(r'tomica(\d+)-(\d+)[_\.]', src, re.IGNORECASE)
+            if src_match and int(src_match.group(1)) == number:
+                img_variant = int(src_match.group(2))
+
+        if img_variant is None:
             continue
 
-        img_variant = int(alt_match.group(2))
         is_box = "box" in src.lower() or "箱" in alt
 
         item = variant_map.get(img_variant)

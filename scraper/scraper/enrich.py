@@ -19,16 +19,16 @@ GEMINI_API_URL = (
 )
 
 PROMPT = """\
-You are a Tomica die-cast car expert. Analyze this product image and extract \
-vehicle attributes as a JSON object with exactly these fields:
+You are a Tomica die-cast car expert. Analyze this product image and the car name \
+to extract vehicle attributes as a JSON object with exactly these fields:
 
 - vehicle_category: one of [car, truck, bus, emergency, construction, motorcycle, aircraft, boat, train, fantasy]
 - body_style: one of [sedan, suv, coupe, wagon, van, pickup, convertible, hatchback, cab_over, special]
-- primary_color: lowercase color name (e.g. "red", "blue", "white")
-- secondary_color: lowercase color name or null if single-color
+- primary_color: the DOMINANT color of the vehicle body. MUST be a real color name like "red", "blue", "white", "black", "silver", "yellow", "green", "orange", "gold", "gray", "brown", "pink", "purple", "beige", "navy", "cream", "chrome", "copper", "maroon". NEVER return "unknown" — always pick the closest color.
+- secondary_color: second most visible color, or null if single-color
 - wheel_count: one of [0, 2, 4, 6, 8]
 - size_class: one of [small, medium, large, extra_large]
-- features: array of applicable items from [police_light, ladder, wing, blade, crane, antenna, decal, open_top, tank, trailer]
+- features: array of applicable items from [police_light, ladder, wing, blade, crane, antenna, decal, open_top, tank, trailer, bucket, hose, plow, box_body, flatbed, drill]
 - era_style: one of [classic, modern, futuristic, retro]
 - has_livery: true if the vehicle has branded livery/graphics, false otherwise
 - window_style: one of [standard, none, panoramic, cab]

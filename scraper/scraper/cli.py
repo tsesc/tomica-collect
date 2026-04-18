@@ -16,6 +16,7 @@ from .unlimited import scrape_unlimited_series
 from .cars import scrape_cars_series
 from .dedup import dedup_report, enrich_catalog
 from .enrich import enrich_batch
+from .classify import classify_batch
 from .output import write_json, write_sql_seed
 
 
@@ -165,6 +166,76 @@ def main():
                 print(f"  {c['model_number']:8s} {c['field']} ← [{c['source']}] {c['new'][:70]}")
         else:
             print("Nothing to enrich — all catalog items already have data.")
+        return
+
+    # scrape classify — rule-based attribute extraction (no AI, instant)
+    if len(args) >= 1 and args[0] == "classify":
+        import os
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        supabase_key = os.environ.get("SUPABASE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        anon_key = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodnRpcGZteGZkbHBvbGNrdWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NjQzNjgsImV4cCI6MjA5MTU0MDM2OH0.MJPwUw6ABTthWKRzmQB8Enh0BF1UMbdJUaKhpHIZ_c0")
+        api_key = supabase_key or anon_key
+
+        import httpx as httpx_sync
+        headers = {"apikey": api_key, "Authorization": f"Bearer {api_key}"}
+        base = f"{supabase_url}/rest/v1"
+
+        # Fetch ALL items without attributes
+        print("Fetching items without attributes...")
+        all_items: list[dict] = []
+        offset = 0
+        while True:
+            resp = httpx_sync.get(
+                f"{base}/tomica_catalog?attributes=is.null&select=id,model_number,car_name,manufacturer,series,release_start&order=model_number&offset={offset}&limit=1000",
+                headers=headers, timeout=30,
+            )
+            batch = resp.json()
+            if not batch:
+                break
+            all_items.extend(batch)
+            offset += len(batch)
+            if len(batch) < 1000:
+                break
+
+        print(f"Found {len(all_items)} items to classify")
+        if not all_items:
+            print("Nothing to classify!")
+            return
+
+        # Classify all items (instant, no API calls)
+        results = classify_batch(all_items)
+        print(f"Classified: {len(results)} items")
+
+        # Generate SQL
+        sql_lines = []
+        for item_id, attrs in results.items():
+            import json as json_mod
+            attrs_json = json_mod.dumps(attrs).replace("'", "''")
+            sql_lines.append(f"UPDATE tomica_catalog SET attributes = '{attrs_json}'::jsonb WHERE id = '{item_id}';")
+
+        # Save SQL file
+        output_path = data_dir / "classify_updates.sql"
+        output_path.write_text("\n".join(sql_lines))
+        print(f"SQL saved: {len(sql_lines)} statements → {output_path}")
+
+        # If service role key available, write directly to DB
+        if supabase_key and supabase_key != anon_key:
+            print("Writing to DB...")
+            write_headers = {**headers, "Content-Type": "application/json", "Prefer": "return=minimal"}
+            success = 0
+            for item_id, attrs in results.items():
+                resp = httpx_sync.patch(
+                    f"{base}/tomica_catalog?id=eq.{item_id}",
+                    headers=write_headers,
+                    json={"attributes": attrs},
+                    timeout=10,
+                )
+                if resp.status_code < 300:
+                    success += 1
+            print(f"Wrote {success}/{len(results)} to DB")
+        else:
+            print("No service role key — SQL file saved, use Supabase MCP to execute.")
+        print("Done!")
         return
 
     # scrape enrich-attributes — batch AI attribute extraction via Gemini Flash

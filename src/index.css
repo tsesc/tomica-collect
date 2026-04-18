@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0');
 @import "tailwindcss";
 
 @theme {
@@ -15,6 +16,8 @@
   --color-outline-variant: #e4beba;
   --color-success: #2E7D32;
   --color-error: #ba1a1a;
+  --color-tertiary: #005f7b;
+  --color-tertiary-container: #00799c;
 
   --font-display: 'Manrope', sans-serif;
   --font-body: 'Inter', sans-serif;

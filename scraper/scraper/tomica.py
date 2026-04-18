@@ -1,9 +1,9 @@
 """Scrape Tomica regular series catalog from takaratomy.co.jp."""
 
+import asyncio
 import httpx
 from bs4 import BeautifulSoup
 import re
-import time
 
 BASE = "https://www.takaratomy.co.jp/products/tomica/lineup/regular"
 IMAGE_BASE = "https://www.takaratomy.co.jp/products/tomica"
@@ -43,9 +43,11 @@ def parse_page(soup: BeautifulSoup) -> list[dict]:
         model_number = match.group(1)
         car_name = match.group(2)
 
-        # Image
+        # Image — two HTML layouts exist:
+        #   Standard: div.car-pic > img
+        #   Slider:   ul.lp-pic-zone > li > img (No.135, No.140, etc.)
         image_url = None
-        img = box.select_one("div.car-pic img")
+        img = box.select_one("div.car-pic img") or box.select_one("ul.lp-pic-zone img")
         if img and img.get("src"):
             src = img["src"]
             if src.startswith("../../"):
@@ -98,27 +100,26 @@ def _guess_manufacturer(car_name: str) -> str | None:
     return None
 
 
-def scrape_regular_series() -> list[dict]:
-    """Scrape all regular Tomica series pages."""
-    all_items: list[dict] = []
+async def scrape_regular_series() -> list[dict]:
+    """Scrape all regular Tomica series pages concurrently."""
 
-    with httpx.Client(
+    async with httpx.AsyncClient(
         headers={"User-Agent": "TomicaCollect-Scraper/1.0 (personal project)"},
         follow_redirects=True,
     ) as client:
-        for i, url in enumerate(PAGES):
-            print(f"  Fetching {url} ...")
+
+        async def fetch(url: str) -> list[dict]:
             try:
-                resp = client.get(url, timeout=30)
+                resp = await client.get(url, timeout=30)
                 resp.raise_for_status()
                 soup = BeautifulSoup(resp.content, "lxml")
                 items = parse_page(soup)
-                all_items.extend(items)
-                print(f"    Found {len(items)} items")
+                print(f"  {url} → {len(items)} items")
+                return items
             except Exception as e:
-                print(f"    Error: {e}")
+                print(f"  {url} → Error: {e}")
+                return []
 
-            if i < len(PAGES) - 1:
-                time.sleep(1)
+        results = await asyncio.gather(*[fetch(url) for url in PAGES])
 
-    return all_items
+    return [item for sublist in results for item in sublist]

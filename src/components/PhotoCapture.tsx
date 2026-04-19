@@ -2,15 +2,18 @@ import { useRef } from 'react'
 
 interface Props {
   onCapture: (file: File) => void
+  disabled?: boolean
 }
 
-export function PhotoCapture({ onCapture }: Props) {
+export function PhotoCapture({ onCapture, disabled }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (file) onCapture(file)
+    // Reset input so the same file can be selected again
+    e.target.value = ''
   }
 
   return (
@@ -19,8 +22,14 @@ export function PhotoCapture({ onCapture }: Props) {
       <h2 className="font-display font-bold text-lg mb-1">辨識你的 Tomica</h2>
       <p className="text-sm opacity-80 mb-4">拍攝盒裝或車體，AI 自動辨識型號</p>
       <div className="flex gap-3">
-        <button onClick={() => cameraRef.current?.click()} className="flex-1 py-2.5 bg-white text-primary rounded-full font-display font-semibold text-sm">拍照辨識</button>
-        <button onClick={() => fileRef.current?.click()} className="flex-1 py-2.5 border border-white/40 rounded-full font-display font-semibold text-sm">從相簿選擇</button>
+        <button onClick={() => cameraRef.current?.click()} disabled={disabled}
+          className="flex-1 py-2.5 bg-white text-primary rounded-full font-display font-semibold text-sm disabled:opacity-50">
+          拍照辨識
+        </button>
+        <button onClick={() => fileRef.current?.click()} disabled={disabled}
+          className="flex-1 py-2.5 border border-white/40 rounded-full font-display font-semibold text-sm disabled:opacity-50">
+          從相簿選擇
+        </button>
       </div>
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFile} />
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />

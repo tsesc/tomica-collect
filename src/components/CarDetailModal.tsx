@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import type { CatalogItem } from '../lib/types'
 import { getItemCode } from '../lib/types'
 import { translateCarName } from '../lib/translate'
@@ -31,6 +31,41 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
   const { displayName, manufacturer, vehicleType } = translateCarName(item.car_name, item.manufacturer)
   const code = getItemCode(item)
 
+  // Swipe-to-dismiss state
+  const [dragY, setDragY] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
+  const startY = useRef(0)
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const modal = modalRef.current
+    if (!modal) return
+    // Only start drag if scrolled to top
+    if (modal.scrollTop <= 0) {
+      startY.current = e.touches[0].clientY
+      setIsDragging(true)
+    }
+  }, [])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging) return
+    const delta = e.touches[0].clientY - startY.current
+    if (delta > 0) {
+      setDragY(delta)
+      e.preventDefault()
+    }
+  }, [isDragging])
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isDragging) return
+    setIsDragging(false)
+    if (dragY > 120) {
+      onClose()
+    } else {
+      setDragY(0)
+    }
+  }, [isDragging, dragY, onClose])
+
   // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -38,22 +73,48 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
     return () => document.removeEventListener('keydown', handler)
   }, [onClose])
 
-  // Prevent body scroll
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
-  }, [])
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center" onClick={onClose}>
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
 
       {/* Modal */}
       <div
+        ref={modalRef}
         className="relative bg-white w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl md:rounded-2xl shadow-2xl animate-slide-up"
+        style={{
+          transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+          transition: isDragging ? 'none' : 'transform 0.2s ease-out',
+          opacity: dragY > 0 ? Math.max(0.3, 1 - dragY / 400) : 1,
+        }}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
+        {/* Drag handle (mobile) */}
+        <div className="md:hidden flex justify-center pt-2 pb-1">
+          <div className="w-10 h-1 rounded-full bg-outline-variant/40" />
+        </div>
+
+        {/* Collection quick action — above image for easy tap */}
+        {onToggleCollection && (
+          <div className="px-4 py-2">
+            <button
+              onClick={() => onToggleCollection(item)}
+              disabled={collectionLoading}
+              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all
+                ${isCollected
+                  ? 'bg-success/10 text-success border border-success/30'
+                  : 'bg-primary text-white shadow-sm'
+                }
+                ${collectionLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {collectionLoading ? '處理中...' : isCollected ? '✓ 已收藏（點擊移除）' : '加入我的收藏'}
+            </button>
+          </div>
+        )}
+
         {/* Close button */}
         <button
           onClick={onClose}
@@ -138,91 +199,90 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
                 <div className="font-medium text-on-surface">{item.body_color.join(', ')}</div>
               </div>
             )}
-            {item.attributes && (
-              <>
-                <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車型分類</div>
-                  <div className="font-medium text-on-surface">
-                    {{ car: '轎車', truck: '卡車', bus: '巴士', emergency: '緊急車輛', construction: '工程車', motorcycle: '機車', aircraft: '飛機', boat: '船', train: '列車', fantasy: '造型車' }[item.attributes.vehicle_category] ?? item.attributes.vehicle_category}
+            {item.attributes && (() => {
+              const a = item.attributes
+              const catMap: Record<string, string> = { car: '轎車', truck: '卡車', bus: '巴士', emergency: '緊急車輛', construction: '工程車', motorcycle: '機車', aircraft: '飛機', boat: '船', train: '列車', fantasy: '造型車' }
+              const styleMap: Record<string, string> = { sedan: '四門轎車', suv: 'SUV', coupe: '雙門跑車', wagon: '旅行車', van: '箱型車', pickup: '皮卡', convertible: '敞篷', hatchback: '掀背', cab_over: '平頭車', special: '特殊' }
+              const sizeMap: Record<string, string> = { small: '小型', medium: '中型', large: '大型', extra_large: '超大型' }
+              const eraMap: Record<string, string> = { classic: '經典', modern: '現代', futuristic: '未來', retro: '復古' }
+              const winMap: Record<string, string> = { standard: '標準', none: '無', panoramic: '全景', cab: '駕駛室' }
+              const featMap: Record<string, string> = { police_light: '🚨 警燈', ladder: '🪜 梯子', wing: '翼', blade: '刀片', crane: '🏗️ 吊臂', antenna: '📡 天線', decal: '🎨 貼紙', open_top: '☀️ 開頂', tank: '🛢️ 油罐', trailer: '🚛 拖車', bucket: '🪣 鏟斗', hose: '🔧 管線', plow: '除雪鏟', box_body: '📦 箱體', flatbed: '平板', drill: '🔩 鑽頭' }
+              const feats = a.features ?? []
+              return <>
+                {a.vehicle_category && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車型分類</div>
+                    <div className="font-medium text-on-surface">{catMap[a.vehicle_category] ?? a.vehicle_category}</div>
                   </div>
-                </div>
-                <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車身型式</div>
-                  <div className="font-medium text-on-surface">
-                    {{ sedan: '四門轎車', suv: 'SUV', coupe: '雙門跑車', wagon: '旅行車', van: '箱型車', pickup: '皮卡', convertible: '敞篷', hatchback: '掀背', cab_over: '平頭車', special: '特殊' }[item.attributes.body_style] ?? item.attributes.body_style}
+                )}
+                {a.body_style && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車身型式</div>
+                    <div className="font-medium text-on-surface">{styleMap[a.body_style] ?? a.body_style}</div>
                   </div>
-                </div>
-                <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車色</div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="w-5 h-5 rounded-full border border-outline-variant/30 inline-block shadow-sm" style={{ backgroundColor: colorToHex(item.attributes.primary_color) }} />
-                    <span className="font-medium text-on-surface">{colorToZh(item.attributes.primary_color)}</span>
-                    {item.attributes.secondary_color && (
-                      <>
-                        <span className="text-on-surface-variant/50 mx-0.5">/</span>
-                        <span className="w-5 h-5 rounded-full border border-outline-variant/30 inline-block shadow-sm" style={{ backgroundColor: colorToHex(item.attributes.secondary_color) }} />
-                        <span className="font-medium text-on-surface">{colorToZh(item.attributes.secondary_color)}</span>
-                      </>
-                    )}
+                )}
+                {a.primary_color && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車色</div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="w-5 h-5 rounded-full border border-outline-variant/30 inline-block shadow-sm" style={{ backgroundColor: colorToHex(a.primary_color) }} />
+                      <span className="font-medium text-on-surface">{colorToZh(a.primary_color)}</span>
+                      {a.secondary_color && (
+                        <>
+                          <span className="text-on-surface-variant/50 mx-0.5">/</span>
+                          <span className="w-5 h-5 rounded-full border border-outline-variant/30 inline-block shadow-sm" style={{ backgroundColor: colorToHex(a.secondary_color) }} />
+                          <span className="font-medium text-on-surface">{colorToZh(a.secondary_color)}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">輪子</div>
-                  <div className="font-medium text-on-surface">{item.attributes.wheel_count} 輪</div>
-                </div>
-                <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車身大小</div>
-                  <div className="font-medium text-on-surface">
-                    {{ small: '小型', medium: '中型', large: '大型', extra_large: '超大型' }[item.attributes.size_class] ?? item.attributes.size_class}
+                )}
+                {a.wheel_count != null && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">輪子</div>
+                    <div className="font-medium text-on-surface">{a.wheel_count} 輪</div>
                   </div>
-                </div>
-                <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">年代風格</div>
-                  <div className="font-medium text-on-surface">
-                    {{ classic: '經典', modern: '現代', futuristic: '未來', retro: '復古' }[item.attributes.era_style] ?? item.attributes.era_style}
+                )}
+                {a.size_class && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車身大小</div>
+                    <div className="font-medium text-on-surface">{sizeMap[a.size_class] ?? a.size_class}</div>
                   </div>
-                </div>
-                <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車窗</div>
-                  <div className="font-medium text-on-surface">
-                    {{ standard: '標準', none: '無', panoramic: '全景', cab: '駕駛室' }[item.attributes.window_style] ?? item.attributes.window_style}
+                )}
+                {a.era_style && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">年代風格</div>
+                    <div className="font-medium text-on-surface">{eraMap[a.era_style] ?? a.era_style}</div>
                   </div>
-                </div>
-                <div className="bg-surface-container-low rounded-lg px-3 py-2">
-                  <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">塗裝</div>
-                  <div className="font-medium text-on-surface">{item.attributes.has_livery ? '有塗裝' : '素色'}</div>
-                </div>
-                {item.attributes.features.length > 0 && (
+                )}
+                {a.window_style && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">車窗</div>
+                    <div className="font-medium text-on-surface">{winMap[a.window_style] ?? a.window_style}</div>
+                  </div>
+                )}
+                {a.has_livery != null && (
+                  <div className="bg-surface-container-low rounded-lg px-3 py-2">
+                    <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-0.5">塗裝</div>
+                    <div className="font-medium text-on-surface">{a.has_livery ? '有塗裝' : '素色'}</div>
+                  </div>
+                )}
+                {feats.length > 0 && (
                   <div className="bg-surface-container-low rounded-lg px-3 py-2 col-span-2">
                     <div className="text-[10px] text-on-surface-variant uppercase tracking-wide mb-1">特殊配件</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {item.attributes.features.map((f) => (
+                      {feats.map((f) => (
                         <span key={f} className="px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-medium rounded-full">
-                          {{ police_light: '🚨 警燈', ladder: '🪜 梯子', wing: '翼', blade: '刀片', crane: '🏗️ 吊臂', antenna: '📡 天線', decal: '🎨 貼紙', open_top: '☀️ 開頂', tank: '🛢️ 油罐', trailer: '🚛 拖車', bucket: '🪣 鏟斗', hose: '🔧 管線', plow: '除雪鏟', box_body: '📦 箱體', flatbed: '平板', drill: '🔩 鑽頭' }[f] ?? f}
+                          {featMap[f] ?? f}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
               </>
-            )}
+            })()}
           </div>
 
-          {/* Collection action button */}
-          {onToggleCollection && (
-            <button
-              onClick={() => onToggleCollection(item)}
-              disabled={collectionLoading}
-              className={`w-full py-3 rounded-xl text-sm font-semibold transition-all
-                ${isCollected
-                  ? 'bg-surface-container-high text-on-surface-variant hover:bg-error/10 hover:text-error'
-                  : 'bg-primary text-white hover:bg-primary-dark shadow-sm'
-                }
-                ${collectionLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {collectionLoading ? '處理中...' : isCollected ? '從收藏移除' : '加入我的收藏'}
-            </button>
-          )}
         </div>
       </div>
     </div>

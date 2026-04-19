@@ -3,10 +3,10 @@ import { Layout } from './components/Layout'
 import { HomePage } from './pages/HomePage'
 import { ScanResultPage } from './pages/ScanResultPage'
 import { CatalogPage } from './pages/CatalogPage'
-import { CollectionPage } from './pages/CollectionPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AuthPage } from './pages/AuthPage'
 import { useAuth } from './hooks/useAuth'
+import { RecognitionProvider } from './hooks/useRecognition'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -18,19 +18,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        <Route element={<Layout />}>
-          {/* Public routes — no login required */}
-          <Route path="catalog" element={<CatalogPage />} />
+      <RecognitionProvider>
+        <Routes>
+          <Route path="/auth" element={<AuthPage />} />
+          <Route element={<Layout />}>
+            {/* Public routes — no login required */}
+            <Route path="catalog" element={<CatalogPage />} />
 
-          {/* Protected routes — login required */}
-          <Route index element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-          <Route path="scan-result" element={<ProtectedRoute><ScanResultPage /></ProtectedRoute>} />
-          <Route path="collection" element={<ProtectedRoute><CollectionPage /></ProtectedRoute>} />
-          <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-        </Route>
-      </Routes>
+            {/* Protected routes — login required */}
+            <Route index element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="scan-result" element={<ProtectedRoute><ScanResultPage /></ProtectedRoute>} />
+            <Route path="collection" element={<Navigate to="/catalog" replace />} />
+            <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          </Route>
+        </Routes>
+      </RecognitionProvider>
     </BrowserRouter>
   )
 }

@@ -10,22 +10,43 @@ export function HomePage() {
   const navigate = useNavigate()
   const { items: collection } = useCollection()
   const { items: catalog } = useCatalog()
-  const { identify } = useRecognition()
+  const { status, error, identify } = useRecognition()
 
   const collected = collection.length
   const total = catalog.length
   const missing = total - collected
   const recent = collection.slice(0, 5)
 
+  const isProcessing = status === 'loading'
+
   async function handleCapture(file: File) {
     const base64 = await compressImage(file)
-    await identify(base64)
-    navigate('/scan-result')
+    const success = await identify(base64)
+    if (success) {
+      navigate('/scan-result')
+    }
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-4 space-y-5">
-      <PhotoCapture onCapture={handleCapture} />
+    <div className="max-w-lg mx-auto px-4 py-4 space-y-5 relative">
+      {/* Loading overlay */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex flex-col items-center justify-center gap-4">
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin" />
+          <p className="text-white font-display font-semibold text-lg">AI 辨識中...</p>
+          <p className="text-white/60 text-sm">正在分析您的照片，請稍候</p>
+        </div>
+      )}
+
+      <PhotoCapture onCapture={handleCapture} disabled={isProcessing} />
+
+      {/* Error message */}
+      {status === 'error' && error && (
+        <div className="bg-error/10 text-error text-sm rounded-xl p-3 text-center">
+          {error}
+        </div>
+      )}
+
       <StatsRow collected={collected} missing={missing} total={total} />
       <div className="flex justify-between items-center">
         <h3 className="font-display font-semibold text-on-surface">最近加入</h3>

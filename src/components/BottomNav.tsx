@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom'
 const tabs = [
   { to: '/', label: '掃描', icon: 'photo_camera' },
   { to: '/catalog', label: '圖鑑', icon: 'auto_stories' },
-  { to: '/collection', label: '收藏', icon: 'emoji_events' },
   { to: '/settings', label: '設定', icon: 'settings' },
 ]
 

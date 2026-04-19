@@ -1,26 +1,38 @@
-import { useState } from 'react'
+import { useState, createContext, useContext } from 'react'
 import type { RecognitionResult, AiProvider } from '../lib/types'
 import { useAuth } from './useAuth'
 import { supabase } from '../lib/supabase'
 
-type Status = 'idle' | 'loading' | 'success' | 'error'
+export type RecognitionStatus = 'idle' | 'loading' | 'success' | 'error'
 
-export function useRecognition() {
+interface RecognitionState {
+  status: RecognitionStatus
+  result: RecognitionResult | null
+  error: string | null
+  capturedImage: string | null
+  identify: (imageBase64: string) => Promise<boolean>
+  reset: () => void
+}
+
+const RecognitionContext = createContext<RecognitionState | null>(null)
+
+export function RecognitionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const [status, setStatus] = useState<Status>('idle')
+  const [status, setStatus] = useState<RecognitionStatus>('idle')
   const [result, setResult] = useState<RecognitionResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [capturedImage, setCapturedImage] = useState<string | null>(null)
 
-  async function identify(imageBase64: string) {
-    if (!user) throw new Error('Not authenticated')
+  async function identify(imageBase64: string): Promise<boolean> {
+    if (!user) { setError('請先登入'); setStatus('error'); return false }
     setStatus('loading')
     setError(null)
     setResult(null)
+    setCapturedImage(imageBase64)
     try {
       const { data: settings } = await supabase.from('user_settings').select('ai_provider').eq('user_id', user.id).single()
       const provider: AiProvider = settings?.ai_provider ?? 'openai'
 
-      // Get current session token for auth
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) throw new Error('No active session')
 
@@ -36,13 +48,25 @@ export function useRecognition() {
       const data: RecognitionResult = await resp.json()
       setResult(data)
       setStatus('success')
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
       setStatus('error')
+      return false
     }
   }
 
-  function reset() { setStatus('idle'); setResult(null); setError(null) }
+  function reset() { setStatus('idle'); setResult(null); setError(null); setCapturedImage(null) }
 
-  return { status, result, error, identify, reset }
+  return (
+    <RecognitionContext.Provider value={{ status, result, error, capturedImage, identify, reset }}>
+      {children}
+    </RecognitionContext.Provider>
+  )
+}
+
+export function useRecognition(): RecognitionState {
+  const ctx = useContext(RecognitionContext)
+  if (!ctx) throw new Error('useRecognition must be used within RecognitionProvider')
+  return ctx
 }

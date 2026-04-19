@@ -21,23 +21,46 @@ const STAGE1_PROMPT = `你是 Tomica 小汽車鑑定專家。請先判斷這張�
 回傳 JSON: { "type": 1-5, "confidence": 0-1 }`
 
 const BOX_PROMPT = `你是 Tomica 小汽車鑑定專家。請從這張 Tomica 包裝圖片中提取以下資訊。逐項回答，無法辨識的欄位填 null。
-1. 型號編號（盒子左上角或右上角的數字，如 "No.23"）
-2. 車名（日文或英文車名，如 "日産 GT-R"）
-3. 系列名稱（如 "トミカ", "トミカプレミアム", "Dream TOMICA"）
-4. 是否為初回特別仕樣（盒子是否有金色/特殊標示）
-5. 車體顏色
-6. 製造商品牌（如 Toyota, Nissan, BMW）
-回傳 JSON: { "model_number": string|null, "car_name": string|null, "series": string|null, "is_first_edition": boolean|null, "body_color": string|null, "manufacturer": string|null }`
 
-const LOOSE_PROMPT = `你是 Tomica 小汽車鑑定專家。這是一台沒有包裝的 Tomica 小汽車。請仔細觀察並提取以下特徵：
-1. 車型類別（轎車/SUV/卡車/巴士/工程車/跑車/其他）
-2. 車體顏色（主色 + 副色）
-3. 製造商品牌
-4. 可能的車款名稱
-5. 車體上的文字或標誌
-6. 底盤刻字（若可見）
-7. 特殊特徵
-回傳 JSON: { "vehicle_type": string|null, "body_color": string|null, "manufacturer": string|null, "car_name": string|null, "markings": string|null, "chassis_text": string|null, "special_features": string|null }`
+1. series — 非常重要！請根據盒子外觀判斷：
+   - 紅色盒子 = "トミカ"（常規系列）
+   - 黑色盒子 = "トミカプレミアム"（Premium系列）
+   - 藍色盒子 = "Dream TOMICA"
+   - "LIMITED VINTAGE" 字樣 = "トミカリミテッドヴィンテージ"
+2. model_number — 盒子上的數字編號。
+   - 常規系列格式: "No.23"
+   - Premium系列格式: 直接數字如 "15"（不帶No.前綴）
+   - 請完整回傳盒上看到的編號
+3. car_name — 車名（日文或英文，如 "NISSAN FAIRLADY Z (Z31)"）
+4. is_first_edition — 是否為初回特別仕樣（盒子是否有金色/特殊標示）
+5. manufacturer — 製造商品牌（如 Toyota, Nissan, BMW）
+6. primary_color — 車體主色（英文: red, blue, white, black, silver, yellow, green, orange, gold, gray, brown, pink, purple）
+7. secondary_color — 車體副色（同上格式，無則 null）
+8. vehicle_category — 從以下選一: car, truck, bus, emergency, construction, motorcycle, aircraft, boat, train, fantasy
+9. body_style — 從以下選一: sedan, suv, coupe, wagon, van, pickup, convertible, hatchback, cab_over, special
+10. top_guesses — 如果看不清編號，給出 3 個最可能的車款猜測（日文車名）
+
+回傳 JSON: { "model_number": string|null, "car_name": string|null, "series": string|null, "is_first_edition": boolean|null, "manufacturer": string|null, "primary_color": string|null, "secondary_color": string|null, "vehicle_category": string|null, "body_style": string|null, "top_guesses": string[] }`
+
+const LOOSE_PROMPT = `你是 Tomica 小汽車鑑定專家。這是一台 Tomica 小汽車（可能沒有包裝）。請仔細觀察並提取以下特徵，盡量填寫所有欄位。
+
+1. manufacturer — 製造商品牌（如 Toyota, Nissan, Honda, BMW, Mercedes-Benz, Subaru, Mitsubishi, Suzuki, Lamborghini 等）
+2. car_name — 最可能的車款全名（日文或英文，如 "NISSAN GT-R NISMO", "TOYOTA CROWN"）。如果不確定具體型號，寫出你最有信心的猜測
+3. model_number — 如果能看到底盤或車身上的 Tomica 編號（如 No.23, LV-N169a），請提取
+4. series — 從外觀推測的 Tomica 系列："トミカ"(常規), "トミカプレミアム"(Premium), "トミカリミテッドヴィンテージ"(TLV), "Dream TOMICA"
+5. vehicle_category — 必填，從以下選一: car, truck, bus, emergency, construction, motorcycle, aircraft, boat, train, fantasy
+6. body_style — 必填，從以下選一: sedan, suv, coupe, wagon, van, pickup, convertible, hatchback, cab_over, special
+7. primary_color — 必填，車體主色（用英文: red, blue, white, black, silver, yellow, green, orange, gold, gray, brown, pink, purple, beige, navy, cream）
+8. secondary_color — 車體副色（同上格式，無則 null）
+9. size_class — 車體大小: small, medium, large, extra_large
+10. era_style — 年代風格: classic, modern, futuristic, retro
+11. features — 特殊配件列表，從以下選取: police_light, ladder, wing, blade, crane, antenna, decal, open_top, tank, trailer, bucket, hose, plow, box_body, flatbed, drill
+12. has_livery — 是否有特殊塗裝/貼紙圖案: true/false
+13. markings — 車體上可見的文字或標誌
+14. chassis_text — 底盤刻字（若可見）
+15. top_guesses — 給出你最有信心的 3 個可能車款名稱猜測（日文），按信心排序
+
+回傳 JSON: { "manufacturer": string|null, "car_name": string|null, "model_number": string|null, "series": string|null, "vehicle_category": string, "body_style": string, "primary_color": string, "secondary_color": string|null, "size_class": string, "era_style": string, "features": string[], "has_livery": boolean, "markings": string|null, "chassis_text": string|null, "top_guesses": string[] }`
 
 function getStage2Prompt(inputType: number): string {
   return inputType <= 2 ? BOX_PROMPT : LOOSE_PROMPT
@@ -127,31 +150,105 @@ async function callAI(provider: string, apiKey: string, prompt: string, imageBas
   }
 }
 
+/** Map AI-extracted series text → DB series value */
+const SERIES_MAP: Record<string, string> = {
+  'トミカ': 'regular',
+  'tomica': 'regular',
+  'トミカプレミアム': 'premium',
+  'tomica premium': 'premium',
+  'premium': 'premium',
+  'プレミアム': 'premium',
+  'プレミアムアンリミテッド': 'premium_unlimited',
+  'premium unlimited': 'premium_unlimited',
+  'トミカリミテッドヴィンテージ': 'limited_vintage',
+  'limited vintage': 'limited_vintage',
+  'tlv': 'limited_vintage',
+  'dream tomica': 'dream',
+  'dream': 'dream',
+  'ドリームトミカ': 'dream',
+}
+
+function normalizeSeries(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const key = raw.toLowerCase().trim()
+  return SERIES_MAP[key] ?? null
+}
+
+/** Normalize model number for flexible matching */
+function normalizeModelNum(mn: string): string {
+  return mn.replace(/\s/g, '').replace(/^(No\.|TP\.|LV-?|TLV-?)/i, '').toLowerCase()
+}
+
 export function matchCandidates(
   features: Record<string, unknown>,
   catalog: Array<Record<string, unknown>>
 ): Array<{ item: Record<string, unknown>; score: number; reasons: string[] }> {
   const modelNumber = features.model_number as string | null
+  const featureSeries = normalizeSeries(features.series as string | null)
+
+  // If we have a model number, try exact match (series-aware)
   if (modelNumber) {
-    const exact = catalog.filter((c) => (c.model_number as string).replace(/\s/g, '') === modelNumber.replace(/\s/g, ''))
-    if (exact.length > 0) return exact.map((item) => ({ item, score: 0.99, reasons: ['Exact model number match'] }))
+    const normNum = normalizeModelNum(modelNumber)
+    let exact = catalog.filter((c) => normalizeModelNum(c.model_number as string) === normNum)
+
+    // If series is known, narrow down; if multiple matches remain, prefer series match
+    if (exact.length > 1 && featureSeries) {
+      const seriesFiltered = exact.filter((c) => c.series === featureSeries)
+      if (seriesFiltered.length > 0) exact = seriesFiltered
+    }
+
+    if (exact.length > 0) {
+      // Only give 0.99 if series also matches or is unknown
+      const score = (featureSeries && exact[0].series !== featureSeries) ? 0.85 : 0.99
+      return exact.map((item) => ({
+        item,
+        score,
+        reasons: [`Model number match: ${item.model_number}${featureSeries ? ` (${featureSeries})` : ''}`],
+      }))
+    }
   }
+
+  // Fuzzy matching with series bonus
   return catalog
     .map((item) => {
       let score = 0
       const reasons: string[] = []
       const attrs = item.attributes as Record<string, unknown> | null
 
+      // Series match bonus (0.15) — or penalty (-0.20) for mismatch
+      if (featureSeries) {
+        if (item.series === featureSeries) {
+          score += 0.15
+          reasons.push(`Series: ${featureSeries}`)
+        } else {
+          score -= 0.20
+        }
+      }
+
       // Manufacturer match (0.20)
       const fm = ((features.manufacturer as string) ?? '').toLowerCase()
       const im = ((item.manufacturer as string) ?? '').toLowerCase()
-      if (fm && im && im.includes(fm)) { score += 0.20; reasons.push(`Manufacturer: ${item.manufacturer}`) }
+      const iname = ((item.car_name as string) ?? '').toLowerCase()
+      if (fm && (im.includes(fm) || iname.includes(fm))) { score += 0.20; reasons.push(`Manufacturer: ${fm}`) }
 
       // Car name match (0.30)
       const fn = ((features.car_name as string) ?? '').toLowerCase()
-      const iname = ((item.car_name as string) ?? '').toLowerCase()
       const inameEn = ((item.car_name_en as string) ?? '').toLowerCase()
-      if (fn && (iname.includes(fn) || inameEn.includes(fn))) { score += 0.30; reasons.push(`Name: ${item.car_name}`) }
+      if (fn) {
+        // Full match
+        if (iname.includes(fn) || inameEn.includes(fn)) {
+          score += 0.30; reasons.push(`Name: ${item.car_name}`)
+        } else {
+          // Partial: check individual words (at least 2 chars each)
+          const words = fn.split(/[\s・]+/).filter(w => w.length >= 2)
+          const matchedWords = words.filter(w => iname.includes(w) || inameEn.includes(w))
+          if (matchedWords.length > 0) {
+            const partial = 0.30 * (matchedWords.length / words.length)
+            score += partial
+            reasons.push(`Partial name: ${matchedWords.join(', ')}`)
+          }
+        }
+      }
 
       if (attrs) {
         // Primary color match (0.15)
@@ -200,11 +297,11 @@ export function matchCandidates(
         if (ft && it2 && ft === it2) { score += 0.10; reasons.push(`Type: ${item.vehicle_type}`) }
       }
 
-      return { item, score, reasons }
+      return { item, score: Math.max(0, score), reasons }
     })
-    .filter((r) => r.score > 0.1)
+    .filter((r) => r.score > 0.05)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 5)
+    .slice(0, 10)
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -260,7 +357,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Stage 3: Database matching
     const { data: catalog } = await supabase.from('tomica_catalog').select('*')
-    const candidates = matchCandidates(features, catalog ?? [])
+    let candidates = matchCandidates(features, catalog ?? [])
+
+    // Fallback: if few candidates, use top_guesses from AI for name matching
+    if (candidates.length < 3 && features.top_guesses?.length > 0) {
+      const existingIds = new Set(candidates.map((c) => c.item.id as string))
+      for (const guess of features.top_guesses as string[]) {
+        const guessLower = guess.toLowerCase()
+        const guessMatches = (catalog ?? [])
+          .filter((c) => !existingIds.has(c.id as string))
+          .filter((c) => {
+            const name = ((c.car_name as string) ?? '').toLowerCase()
+            const nameEn = ((c.car_name_en as string) ?? '').toLowerCase()
+            return name.includes(guessLower) || guessLower.includes(name) ||
+              nameEn.includes(guessLower) || guessLower.includes(nameEn) ||
+              guessLower.split(/[\s・]+/).filter(w => w.length >= 2).some(w => name.includes(w) || nameEn.includes(w))
+          })
+          .slice(0, 2)
+          .map((item) => ({ item, score: 0.15, reasons: [`AI guess: ${guess}`] }))
+        candidates = [...candidates, ...guessMatches]
+        guessMatches.forEach((m) => existingIds.add(m.item.id as string))
+      }
+      candidates = candidates.slice(0, 10)
+    }
 
     const inputTypes = ['', 'box_front', 'box_back', 'loose', 'chassis', 'other']
 

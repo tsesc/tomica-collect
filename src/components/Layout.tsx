@@ -4,9 +4,9 @@ import { TopNav } from './TopNav'
 
 export function Layout() {
   return (
-    <div className="min-h-screen bg-surface font-body text-on-surface">
+    <div className="h-dvh flex flex-col bg-surface font-body text-on-surface overflow-hidden">
       {/* Mobile header */}
-      <header className="md:hidden h-12 bg-primary-container flex items-center justify-between px-4 sticky top-0 z-40">
+      <header className="md:hidden h-12 shrink-0 bg-primary-container flex items-center justify-between px-4 z-40">
         <Link to="/" className="text-white font-display font-bold text-base tracking-tight">
           Tomica<span className="font-light opacity-85">Collect</span>
         </Link>
@@ -16,16 +16,16 @@ export function Layout() {
       </header>
 
       {/* Desktop header */}
-      <div className="hidden md:block sticky top-0 z-40">
+      <div className="hidden md:block shrink-0 z-40">
         <TopNav />
       </div>
 
-      <main className="pb-20 md:pb-16">
+      <main className="flex-1 overflow-y-auto overscroll-none">
         <Outlet />
       </main>
 
       {/* Bottom nav — ALWAYS visible, all screen sizes */}
-      <div className="fixed bottom-0 inset-x-0 z-50">
+      <div className="shrink-0 z-50">
         <BottomNav />
       </div>
     </div>

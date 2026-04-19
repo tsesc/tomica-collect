@@ -84,7 +84,7 @@ export function CatalogPage() {
   const isRegular = series === 'regular'
   const { items, loading } = useCatalog({
     series,
-    numberRange: (search || year || !isRegular || numberRange === 'all') ? undefined : numberRange,
+    numberRange: (!isRegular || numberRange === 'all') ? undefined : numberRange,
     source: (isRegular && source !== 'all') ? source : undefined,
     year: year ?? undefined,
     search: debouncedSearch || undefined,
@@ -125,8 +125,6 @@ export function CatalogPage() {
     setActionLoading(false)
   }, [user, collectedIds, collectionItems, addToCollection, removeFromCollection])
 
-  const activeMode = search ? 'search' : year ? 'year' : 'range'
-
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 md:py-5">
       {/* Series tabs */}
@@ -154,7 +152,7 @@ export function CatalogPage() {
           </svg>
           <input
             type="text"
-            placeholder="搜尋車名、型號 (例: Skyline、GT-R、No.1)"
+            placeholder="搜尋車名、品牌、顏色、車型 (例: 紅色 豐田、tesla、跑車)"
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white text-on-surface placeholder-on-surface-variant/50 text-sm outline-none border border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/20 shadow-sm"
@@ -167,8 +165,8 @@ export function CatalogPage() {
         </div>
       </div>
 
-      {/* Number range tabs — only for regular series, hidden when searching or year filter */}
-      {isRegular && activeMode === 'range' && (
+      {/* Number range tabs — only for regular series */}
+      {isRegular && (
         <div className="mb-3 overflow-x-auto scrollbar-hide">
           <div className="flex gap-1.5 min-w-max">
             {NUMBER_RANGES.map((r) => (
@@ -243,23 +241,25 @@ export function CatalogPage() {
             </>
           )}
 
-          {/* Collection filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">收藏</span>
-            {COLLECTION_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setCollectionFilter(opt.value)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
-                  ${collectionFilter === opt.value
-                    ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-                    : 'bg-white text-on-surface-variant border border-outline-variant/20 hover:bg-surface-container-low'
-                  }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          {/* Collection filter — only when logged in */}
+          {user && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-on-surface-variant font-medium mr-0.5">收藏</span>
+              {COLLECTION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setCollectionFilter(opt.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all
+                    ${collectionFilter === opt.value
+                      ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+                      : 'bg-white text-on-surface-variant border border-outline-variant/20 hover:bg-surface-container-low'
+                    }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -312,12 +312,14 @@ export function CatalogPage() {
       {/* Stats bar */}
       <div className="flex items-center justify-between mb-3 px-1">
         <div className="text-xs text-on-surface-variant">
-          {activeMode === 'search' && '搜尋結果'}
-          {activeMode === 'year' && `${year} 年`}
-          {activeMode === 'range' && (numberRange === 'all' ? '全部' : `No.${numberRange.split('-')[0]}–${numberRange.split('-')[1]}`)}
+          {numberRange !== 'all' && isRegular && `No.${numberRange.split('-')[0]}–${numberRange.split('-')[1]}`}
+          {numberRange !== 'all' && isRegular && (search || year) && ' · '}
+          {search && '搜尋結果'}
+          {!search && year && `${year} 年`}
+          {!search && !year && numberRange === 'all' && '全部'}
           <span className="mx-1.5 text-outline-variant">·</span>
           <span className="font-semibold text-on-surface">{totalCount}</span> 款
-          {collectedCount > 0 && (
+          {user && collectedCount > 0 && (
             <>
               <span className="mx-1.5 text-outline-variant">·</span>
               <span className="text-success font-semibold">{collectedCount}</span> 已收藏

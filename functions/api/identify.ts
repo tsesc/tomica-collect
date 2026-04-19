@@ -54,13 +54,21 @@ async function callOpenAI(apiKey: string, prompt: string, imageBase64: string): 
       response_format: { type: 'json_object' },
     }),
   })
+  if (!resp.ok) {
+    const errBody = await resp.text()
+    throw new Error(`OpenAI API ${resp.status}: ${errBody.slice(0, 200)}`)
+  }
   const data = await resp.json() as any
+  if (!data.choices?.[0]?.message?.content) {
+    throw new Error(`OpenAI empty response: ${JSON.stringify(data).slice(0, 200)}`)
+  }
   return data.choices[0].message.content
 }
 
 async function callGemini(apiKey: string, prompt: string, imageBase64: string): Promise<string> {
-  const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '')
-  const mimeType = imageBase64.match(/^data:(image\/\w+);/)?.[1] ?? 'image/jpeg'
+  const base64Data = imageBase64.replace(/^data:image\/[^;]+;base64,/, '')
+  const mimeMatch = imageBase64.match(/^data:(image\/[^;]+);/)
+  const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     {
@@ -72,13 +80,24 @@ async function callGemini(apiKey: string, prompt: string, imageBase64: string): 
       }),
     }
   )
+  if (!resp.ok) {
+    const errBody = await resp.text()
+    throw new Error(`Gemini API ${resp.status}: ${errBody.slice(0, 200)}`)
+  }
   const data = await resp.json() as any
+  if (data.error) {
+    throw new Error(`Gemini error: ${data.error.message ?? JSON.stringify(data.error)}`)
+  }
+  if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+    throw new Error(`Gemini empty response: ${JSON.stringify(data).slice(0, 200)}`)
+  }
   return data.candidates[0].content.parts[0].text
 }
 
 async function callClaude(apiKey: string, prompt: string, imageBase64: string): Promise<string> {
-  const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '')
-  const mimeType = imageBase64.match(/^data:(image\/\w+);/)?.[1] ?? 'image/jpeg'
+  const base64Data = imageBase64.replace(/^data:image\/[^;]+;base64,/, '')
+  const mimeMatch = imageBase64.match(/^data:(image\/[^;]+);/)
+  const mimeType = mimeMatch?.[1] ?? 'image/jpeg'
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
@@ -88,7 +107,14 @@ async function callClaude(apiKey: string, prompt: string, imageBase64: string): 
       messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: mimeType, data: base64Data } }, { type: 'text', text: prompt }] }],
     }),
   })
+  if (!resp.ok) {
+    const errBody = await resp.text()
+    throw new Error(`Claude API ${resp.status}: ${errBody.slice(0, 200)}`)
+  }
   const data = await resp.json() as any
+  if (!data.content?.[0]?.text) {
+    throw new Error(`Claude empty response: ${JSON.stringify(data).slice(0, 200)}`)
+  }
   return data.content[0].text
 }
 
@@ -256,9 +282,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       { headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error('identify error:', err)
+    const errMsg = err instanceof Error ? err.message : String(err)
+    console.error('identify error:', errMsg, err)
     return new Response(
-      JSON.stringify({ error: 'Recognition failed. Please try again.' }),
+      JSON.stringify({ error: `Recognition failed: ${errMsg}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

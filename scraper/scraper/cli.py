@@ -445,6 +445,169 @@ def main():
         output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
         print(f"Wrote {len(items)} items to {output_path}")
         print("Done!")
+    elif len(args) >= 1 and args[0] == "fix-dupes":
+        """Fix variants of the same model_number that share an identical image_url.
+
+        Strategy:
+          1. Query DB for groups where multiple variants share the same image_url.
+          2. Re-search Bing with year-specific queries to find distinct images.
+          3. Update DB for variants where a different image was found.
+          4. NULL-out any variants that still share a URL after searching (so they
+             can be re-searched later or filled by another source).
+        """
+        import os
+        import logging
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
+        anon_key = os.environ.get("SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFodnRpcGZteGZkbHBvbGNrdWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NjQzNjgsImV4cCI6MjA5MTU0MDM2OH0.MJPwUw6ABTthWKRzmQB8Enh0BF1UMbdJUaKhpHIZ_c0")
+        db_key = supabase_key or anon_key
+        headers = {"apikey": db_key, "Authorization": f"Bearer {db_key}", "Content-Type": "application/json"}
+        base = f"{supabase_url}/rest/v1"
+
+        import httpx as httpx_sync
+        from playwright.async_api import async_playwright
+        from .image_search import search_one_image_playwright, _score_url
+
+        # Step 1: Fetch all variants that have an image_url and a variant number
+        print("Fetching catalog items with images...")
+        all_items: list[dict] = []
+        offset = 0
+        while True:
+            resp = httpx_sync.get(
+                f"{base}/tomica_catalog?image_url=not.is.null&variant=not.is.null"
+                f"&select=id,model_number,car_name,variant,image_url,release_start"
+                f"&order=model_number,variant&offset={offset}&limit=1000",
+                headers=headers, timeout=30,
+            )
+            batch = resp.json()
+            if not batch:
+                break
+            all_items.extend(batch)
+            offset += len(batch)
+            if len(batch) < 1000:
+                break
+        print(f"Fetched {len(all_items)} items")
+
+        # Step 2: Identify groups sharing the same (model_number, image_url)
+        from collections import defaultdict
+        groups: dict[tuple, list[dict]] = defaultdict(list)
+        for item in all_items:
+            key = (item["model_number"], item["image_url"])
+            groups[key].append(item)
+
+        # Only keep groups with >1 variant sharing same URL
+        dup_groups = {k: v for k, v in groups.items() if len(v) > 1}
+        print(f"Found {len(dup_groups)} duplicate image groups across {sum(len(v) for v in dup_groups.values())} variants")
+
+        if not dup_groups:
+            print("No duplicate images found!")
+            return
+
+        # Flatten to items list, keeping track of their shared URL
+        items_to_search: list[dict] = []
+        for (model_number, shared_url), variants in dup_groups.items():
+            for item in variants:
+                items_to_search.append({**item, "_shared_url": shared_url})
+
+        print(f"Will re-search {len(items_to_search)} variants with year-specific queries")
+
+        # Step 3: Re-search with Playwright
+        new_images: dict[str, str | None] = {}  # item_id -> new_url or None
+
+        async def _run_search():
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True)
+                context = await browser.new_context(
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+                    locale="ja-JP",
+                )
+                page = await context.new_page()
+
+                for i, item in enumerate(items_to_search):
+                    mn = item["model_number"]
+                    cn = item["car_name"]
+                    v = item.get("variant")
+                    shared_url = item["_shared_url"]
+
+                    # Extract year from release_start (e.g. "2006-04" → 2006)
+                    year = None
+                    if item.get("release_start"):
+                        try:
+                            year = int(item["release_start"][:4])
+                        except (ValueError, TypeError):
+                            pass
+
+                    print(f"[{i+1}/{len(items_to_search)}] {mn}-{v} {cn[:25]} ({year or '?'}年)...", end=" ", flush=True)
+
+                    new_url = await search_one_image_playwright(
+                        page, mn, v, cn, year=year, exclude_url=shared_url
+                    )
+
+                    if new_url and new_url != shared_url:
+                        new_images[item["id"]] = new_url
+                        print(f"✓ {new_url[:50]}")
+                    else:
+                        new_images[item["id"]] = None
+                        print("✗ no distinct image found")
+
+                    await asyncio.sleep(2)
+
+                await browser.close()
+
+        asyncio.run(_run_search())
+
+        # Step 4: Identify variants that still have no distinct image
+        # For each dup group, check if ALL variants got new distinct images
+        # If not, NULL out all but the oldest variant (variant with lowest number)
+        items_to_update: dict[str, str | None] = {}
+
+        for (model_number, shared_url), variants in dup_groups.items():
+            sorted_variants = sorted(variants, key=lambda x: x.get("variant") or 0)
+            oldest_id = sorted_variants[0]["id"]
+
+            got_new = [(v, new_images.get(v["id"])) for v in variants]
+            fixed = [(v, url) for v, url in got_new if url is not None]
+            unfixed = [(v, url) for v, url in got_new if url is None]
+
+            if fixed:
+                # Update variants that got new distinct images
+                for v, url in fixed:
+                    items_to_update[v["id"]] = url
+
+            if unfixed:
+                print(f"\n  {model_number}: {len(unfixed)} variants still share same image → NULLing all but oldest (variant {sorted_variants[0].get('variant')})")
+                for v, _ in unfixed:
+                    if v["id"] != oldest_id:
+                        items_to_update[v["id"]] = None  # NULL out duplicates
+
+        # Step 5: Apply updates
+        print(f"\nApplying {len(items_to_update)} updates to Supabase...")
+        updated = nulled = failed = 0
+        write_headers = {**headers, "Prefer": "return=minimal"}
+        for item_id, new_url in items_to_update.items():
+            try:
+                r = httpx_sync.patch(
+                    f"{base}/tomica_catalog?id=eq.{item_id}",
+                    headers=write_headers,
+                    json={"image_url": new_url},
+                    timeout=10,
+                )
+                r.raise_for_status()
+                if new_url:
+                    updated += 1
+                else:
+                    nulled += 1
+            except Exception as e:
+                print(f"  Failed {item_id}: {e}")
+                failed += 1
+
+        print(f"\nDone! Updated: {updated} with new images, NULLed: {nulled} duplicates, Failed: {failed}")
+        if nulled:
+            print(f"  {nulled} variants cleared — run 'scrape find-images' to re-search them")
+        return
+
     elif len(args) >= 1 and args[0] == "dedup":
         report = dedup_report(data_dir)
         print(report)

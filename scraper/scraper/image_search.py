@@ -63,12 +63,26 @@ def _extract_image_urls_from_html(html: str) -> list[str]:
     return [url for _, url in result]
 
 
-async def search_one_image_playwright(page, model_number: str, variant: int | None, car_name: str) -> str | None:
-    """Search Bing Images for a single Tomica model using Playwright page."""
+async def search_one_image_playwright(
+    page,
+    model_number: str,
+    variant: int | None,
+    car_name: str,
+    year: int | None = None,
+    exclude_url: str | None = None,
+) -> str | None:
+    """Search Bing Images for a single Tomica model using Playwright page.
+
+    Args:
+        exclude_url: If set, skip this URL from results (used to avoid returning same duplicate).
+    """
     query = f"トミカ {model_number}"
     if variant:
         query += f"-{variant}"
-    query += f" {car_name} ミニカー"
+    query += f" {car_name}"
+    if year:
+        query += f" {year}年"
+    query += " ミニカー"
 
     encoded = urllib.parse.quote(query)
     url = f"https://www.bing.com/images/search?q={encoded}"
@@ -90,10 +104,14 @@ async def search_one_image_playwright(page, model_number: str, variant: int | No
         }''')
 
         if urls:
-            # Score and pick best URL
-            scored = [(s, u) for u in urls if (s := _score_url_js(u)) >= 0]
+            # Score and pick best URL, optionally excluding a known duplicate
+            scored = [(s, u) for u in urls if (s := _score_url_js(u)) >= 0 and u != exclude_url]
             scored.sort(key=lambda x: -x[0])
-            return scored[0][1] if scored else urls[0]
+            if scored:
+                return scored[0][1]
+            # Fall back to any URL that isn't the excluded one
+            filtered = [u for u in urls if u != exclude_url]
+            return filtered[0] if filtered else None
         return None
     except Exception as e:
         logger.warning("Search failed for %s %s: %s", model_number, car_name, e)

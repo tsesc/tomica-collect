@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Live site**: https://tomica-collect.pages.dev
 - **GitHub**: https://github.com/tsesc/tomica-collect
-- AI scan (photo → recognition pipeline → catalog match), catalog browse (150 current + 1028 historical), collection tracking, BYOK API keys (OpenAI/Gemini/Claude)
+- **DB**: 2,118 models across 5 series (Regular, TLV, Premium, Unlimited, Dream) with AI-extracted visual attributes
+- AI scan (photo → 3-stage recognition pipeline → catalog match), catalog browse, collection tracking, BYOK API keys (OpenAI/Gemini/Claude)
 
 ## Build & Test Commands
 
@@ -23,15 +24,23 @@ npx vitest run tests/hooks/useAuth.test.ts  # Single test file
 ### Scraper (Python 3.12, under scraper/)
 ```bash
 cd scraper
-uv run scrape                     # Scrape current 150 models (async, ~1s)
-uv run scrape history             # Scrape 1028 historical variants (async, ~11s)
-uv run scrape diff <catalog|history>      # Compare current vs latest backup
-uv run scrape recover <catalog|history>   # Merge lost items from backup
+uv run scrape                     # Regular 150 models
+uv run scrape history             # Historical 1028 variants
+uv run scrape tlv                 # TLV 1335 models (POST API)
+uv run scrape dream               # Dream 27 models
+uv run scrape premium             # Premium 5 models
+uv run scrape unlimited           # Premium Unlimited 12 models
+uv run scrape classify            # Rule-based attribute extraction (no AI, instant)
+uv run scrape extract-colors      # Pillow pixel-based color extraction (no AI)
+uv run scrape enrich-attributes   # Gemini Flash AI attribute extraction (needs GEMINI_API_KEY)
+uv run scrape funbox              # Taiwan retailer data
+uv run scrape dedup               # Cross-source dedup report
+uv run identify photo.jpg         # Local image identification (no AI)
 ```
 
 ### Deploy
 ```bash
-pnpm build && npx wrangler pages deploy dist --project-name tomica-collect
+pnpm build && npx wrangler pages deploy dist --project-name tomica-collect --commit-dirty=true --commit-message="deploy"
 ```
 CI/CD: push to `main` → GitHub Actions (ci.yml: build + test, deploy.yml: Cloudflare Pages).
 
@@ -41,63 +50,46 @@ CI/CD: push to `main` → GitHub Actions (ci.yml: build + test, deploy.yml: Clou
 React SPA (Vite + Tailwind v4)
   → Cloudflare Pages Functions (/api/identify, /api/settings)
     → AI Vision APIs (OpenAI gpt-4o / Gemini gemini-2.5-flash / Claude claude-sonnet-4-6)
-    → Supabase (Auth + Postgres)
+    → Supabase (Auth + Postgres + RLS)
+
+Python Scraper (uv + httpx + Pillow)
+  → takaratomy.co.jp, cochume.com, minicar.tomytec.co.jp, funbox
+  → Supabase DB (via REST API or MCP)
 ```
 
-### Frontend (src/)
-- **Routing**: React Router 7. `/catalog` is public; all others wrapped in `<ProtectedRoute>`.
-- **Hooks**: `useAuth` (Supabase session), `useCatalog` (filtered queries), `useCollection` (CRUD), `useRecognition` (calls /api/identify with JWT)
-- **Design System**: "Diecast Heritage" — primary `#D32F2F`, Manrope headlines, Inter body. Tokens in `src/index.css` via `@theme`.
-- **State flow quirk**: `useRecognition` result is created on HomePage but consumed on ScanResultPage — state doesn't persist across navigation.
+### Key Data Flow
+1. Scrapers fetch catalog data → JSON → SQL → Supabase DB
+2. classify.py enriches all items with rule-based attributes (vehicle_category, body_style, features)
+3. color_extract.py adds pixel-based colors from images (no AI)
+4. enrich.py optionally upgrades with Gemini Flash AI vision (most accurate colors)
+5. Frontend queries DB with JSONB attribute filters
+6. AI recognition uses attributes for pre-filter + weighted scoring
 
-### API (functions/api/)
-Cloudflare Pages Functions. Both endpoints verify JWT from `Authorization: Bearer <token>` and extract verified `user.id` — never trust client-provided user_id.
-
-- **identify.ts**: 3-stage AI recognition pipeline:
-  1. Scene classification (box front/back/loose/chassis) — prompt in Chinese
-  2. Structured feature extraction (different prompts per input type: BOX_PROMPT vs LOOSE_PROMPT)
-  3. Database matching via `matchCandidates` (exported for testing) — exact model_number → 0.99, otherwise weighted feature scoring, top 5 candidates
-- **settings.ts**: BYOK API key upsert (note: SettingsPage currently writes directly to DB, bypassing this endpoint)
-
-### Database (Supabase)
-- **tomica_catalog**: 150 current models. RLS: `anon` + `authenticated` SELECT. model_number always prefixed "No." (e.g., "No.23").
+### Database (Supabase, project ref: qhvtipfmxfdlpolckubb)
+- **tomica_catalog**: 2,118 models. `attributes JSONB` with GIN index for filter queries. RLS: `anon` + `authenticated` SELECT.
 - **user_collection**: UNIQUE(user_id, catalog_id). RLS: own data only.
-- **recognition_log**: AI scan history (input_type, provider, raw_response, candidates, was_corrected).
-- **user_settings**: API keys as plaintext JSONB. Auto-created via trigger on signup.
-- Migrations: `supabase/migrations/001_initial_schema.sql`, `002_add_release_dates.sql`
+- **recognition_log**: AI scan history.
+- **user_settings**: BYOK API keys (plaintext JSONB). Auto-created via trigger on signup.
 
-### Scraper (scraper/)
-Python 3.12 with `uv`. Async concurrent fetching via `httpx.AsyncClient`.
-
-- **tomica.py**: Scrapes takaratomy.co.jp regular lineup. CSS selectors: `div.lineup-box` → `.CarName` → `div.car-pic img`. All 8 pages fetched concurrently.
-- **history.py**: Scrapes cochume.com per number (1-150). Text-based regex parsing for variants (`No.X-Y：CarName`), dates (`【販売期間】`), images via alt text. Concurrency: `Semaphore(10)` with 0.3s delay.
-- **cli.py**: Auto-backup to `data/backup/` with timestamps before overwriting. Post-scrape diff warns about lost items. Recovery via `scrape recover`.
-- **output.py**: Normalizes items, writes JSON + SQL seed (INSERT ON CONFLICT DO NOTHING).
-- URL quirks: No.21 has typo URL (`tiomica`), No.141-150 use `longtomica` prefix.
+### Local Docker Backup
+```bash
+docker start tomica-postgres  # Port 54320, user: tomica, pass: tomica_local, db: tomica_collect
+```
 
 ## Environment Variables
 
 ### Frontend (.env)
-- `VITE_SUPABASE_URL` — Supabase project URL (public, baked into bundle)
-- `VITE_SUPABASE_ANON_KEY` — Supabase anon key (public)
+- `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — public, baked into bundle
 
-### Cloudflare Workers Secrets (via wrangler secret)
-- `SUPABASE_URL` — Same URL but server-side
-- `SUPABASE_SERVICE_ROLE_KEY` — Service role key (secret, bypasses RLS)
+### Cloudflare Workers Secrets
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — server-side only
 
-## Testing
-
-- Framework: Vitest + Testing Library + happy-dom (not jsdom)
-- `tests/api/identify.test.ts` — unit tests for `matchCandidates()`
-- `tests/hooks/*.test.ts` — hook tests for auth, catalog, collection, recognition
-- No integration tests for Cloudflare Functions yet
+### Scraper
+- `GEMINI_API_KEY` — for `enrich-attributes` command only
+- `SUPABASE_SERVICE_ROLE_KEY` — for direct DB writes (optional, can use MCP instead)
 
 ## Known Issues / TODO
-
-- [ ] `/catalog` shows empty grid — RLS may block anon queries despite policy
-- [ ] 1028 historical models not imported to Supabase (only in `scraper/data/history.json`)
-- [ ] DB needs `variant` column on `tomica_catalog` for historical models
 - [ ] API keys stored as plaintext JSONB — `pgcrypto` enabled but unused
 - [ ] No rate limiting on Cloudflare Functions
-- [ ] Mobile filter chips not implemented on CatalogPage
 - [ ] SettingsPage writes directly to DB instead of via `/api/settings`
+- [ ] useRecognition state doesn't persist across navigation (HomePage → ScanResultPage)

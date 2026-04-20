@@ -6,6 +6,7 @@ import { ConfidenceRing } from '../components/ConfidenceRing'
 import { translateCarName } from '../lib/translate'
 import { getItemCode } from '../lib/types'
 import type { RecognitionCandidate } from '../lib/types'
+import { CATEGORY_ZH, COLOR_ZH } from '../lib/display'
 
 const FEATURE_LABELS: Record<string, string> = {
   manufacturer: '製造商',
@@ -18,18 +19,6 @@ const FEATURE_LABELS: Record<string, string> = {
   body_style: '車身',
   markings: '車身文字',
   chassis_text: '底盤刻字',
-}
-
-const CATEGORY_ZH: Record<string, string> = {
-  car: '轎車', truck: '卡車', bus: '巴士', emergency: '緊急車輛',
-  construction: '工程車', motorcycle: '機車', aircraft: '飛機',
-  boat: '船', train: '列車', fantasy: '造型車',
-}
-
-const COLOR_ZH: Record<string, string> = {
-  white: '白色', black: '黑色', red: '紅色', blue: '藍色', silver: '銀色',
-  yellow: '黃色', green: '綠色', orange: '橙色', gold: '金色', gray: '灰色',
-  brown: '棕色', pink: '粉紅', purple: '紫色', beige: '米色', navy: '深藍',
 }
 
 function formatFeatureValue(key: string, value: unknown): string | null {

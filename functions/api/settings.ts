@@ -30,16 +30,27 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return new Response(JSON.stringify({ error: 'Invalid AI provider' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
 
-    // Validate api_key
-    if (!api_key || typeof api_key !== 'string' || api_key.length > 500) {
+    // api_key is optional — omit to update provider only without touching existing keys
+    if (api_key !== undefined && (typeof api_key !== 'string' || api_key.length > 500)) {
       return new Response(JSON.stringify({ error: 'Invalid API key' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
     }
+
+    // Fetch existing keys so we can merge rather than overwrite
+    const { data: existing } = await supabase
+      .from('user_settings')
+      .select('api_keys')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    const mergedKeys = api_key !== undefined
+      ? { ...(existing?.api_keys ?? {}), [ai_provider]: api_key }
+      : (existing?.api_keys ?? {})
 
     // Use verified user.id, never trust client-provided user_id
     const { error } = await supabase.from('user_settings').upsert({
       user_id: user.id,
       ai_provider,
-      api_keys: { [ai_provider]: api_key },
+      api_keys: mergedKeys,
       updated_at: new Date().toISOString(),
     })
 

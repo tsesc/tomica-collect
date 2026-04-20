@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import type { CollectionItem } from '../lib/types'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
@@ -39,7 +39,7 @@ export function useCollection() {
     await fetchCollection()
   }
 
-  const collectedIds = new Set(items.map((i) => i.catalog_id))
+  const collectedIds = useMemo(() => new Set(items.map((i) => i.catalog_id)), [items])
 
   return { items, loading, error, addToCollection, removeFromCollection, updateItem, collectedIds, refetch: fetchCollection }
 }

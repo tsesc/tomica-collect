@@ -20,7 +20,7 @@ from .classify import classify_batch
 from .color_extract import extract_colors_batch
 from .image_search import batch_search_images
 from .output import write_json, write_sql_seed
-from .fandom import scrape_fandom, import_to_supabase as fandom_import_to_supabase
+from .fandom import scrape_fandom, import_to_supabase as fandom_import_to_supabase, fetch_fandom_images
 
 
 def _backup(data_dir: Path, filename: str) -> Path | None:
@@ -629,6 +629,17 @@ def main():
         else:
             print("\nNo SUPABASE_SERVICE_ROLE_KEY set — run 'scrape fandom-import' to import.")
         print("Done!")
+
+    elif len(args) >= 1 and args[0] == "fandom-images":
+        import os
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        if not service_key:
+            print("Error: SUPABASE_SERVICE_ROLE_KEY env var required")
+            sys.exit(1)
+        print("Fetching Fandom wiki images for catalog records...")
+        result = fetch_fandom_images(service_key, supabase_url)
+        print(f"Done! updated={result['updated']}, not_found={result['not_found']}, failed={result['failed']}")
 
     elif len(args) >= 1 and args[0] == "fandom-import":
         import os

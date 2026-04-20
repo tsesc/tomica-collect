@@ -9,10 +9,15 @@ import type { CatalogItem, Series } from '../lib/types'
 
 const SERIES_TABS: { value: Series; label: string }[] = [
   { value: 'regular', label: '常規' },
+  { value: 'fandom', label: 'Fandom' },
   { value: 'limited_vintage', label: 'TLV' },
   { value: 'premium', label: 'Premium' },
   { value: 'premium_unlimited', label: 'Unlimited' },
   { value: 'dream', label: 'Dream' },
+  { value: 'disney', label: 'Disney' },
+  { value: 'cars', label: 'Cars' },
+  { value: 'giftset', label: '禮盒' },
+  { value: 'town', label: 'Town' },
 ]
 
 const NUMBER_RANGES: { value: NumberRange | 'all'; label: string }[] = [
@@ -82,9 +87,10 @@ export function CatalogPage() {
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const isRegular = series === 'regular'
+  const isNumbered = series === 'regular' || series === 'fandom'
   const { items, loading } = useCatalog({
     series,
-    numberRange: (!isRegular || numberRange === 'all') ? undefined : numberRange,
+    numberRange: (!isNumbered || numberRange === 'all') ? undefined : numberRange,
     source: (isRegular && source !== 'all') ? source : undefined,
     year: year ?? undefined,
     search: debouncedSearch || undefined,
@@ -165,8 +171,8 @@ export function CatalogPage() {
         </div>
       </div>
 
-      {/* Number range tabs — only for regular series */}
-      {isRegular && (
+      {/* Number range tabs — only for numbered series (regular / fandom) */}
+      {isNumbered && (
         <div className="mb-3 overflow-x-auto scrollbar-hide">
           <div className="flex gap-1.5 min-w-max">
             {NUMBER_RANGES.map((r) => (

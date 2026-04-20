@@ -188,6 +188,101 @@ async def scrape_fandom(fetch_images: bool = False) -> list[dict]:
     return items
 
 
+def fetch_fandom_images(service_role_key: str, supabase_url: str, batch_size: int = 500) -> dict:
+    """Fetch thumbnail images for fandom records in Supabase that have no image_url.
+
+    Queries the DB for fandom records with null image_url, reads wiki_title from
+    metadata, batch-fetches thumbnails from the Fandom MediaWiki API, then PATCHes
+    image_url back into Supabase.
+
+    Returns: {"updated": int, "not_found": int, "failed": int}
+    """
+    import json as _json
+
+    headers = {
+        "apikey": service_role_key,
+        "Authorization": f"Bearer {service_role_key}",
+        "Content-Type": "application/json",
+    }
+    base_url = f"{supabase_url}/rest/v1/tomica_catalog"
+
+    # 1. Fetch all fandom rows missing image_url (paginated)
+    rows: list[dict] = []
+    offset = 0
+    with httpx.Client(timeout=60) as client:
+        while True:
+            resp = client.get(
+                f"{base_url}?source=eq.fandom&image_url=is.null"
+                f"&select=id,metadata&limit=1000&offset={offset}",
+                headers=headers,
+            )
+            batch = resp.json()
+            if not batch:
+                break
+            rows.extend(batch)
+            offset += len(batch)
+            if len(batch) < 1000:
+                break
+
+    print(f"  Found {len(rows)} fandom records without images")
+    if not rows:
+        return {"updated": 0, "not_found": 0, "failed": 0}
+
+    # Map wiki_title → row id
+    title_to_ids: dict[str, list[str]] = {}
+    for row in rows:
+        meta = row.get("metadata") or {}
+        title = meta.get("wiki_title", "")
+        if title:
+            title_to_ids.setdefault(title, []).append(row["id"])
+
+    titles = list(title_to_ids.keys())
+    print(f"  Fetching images for {len(titles)} unique wiki titles...")
+
+    # 2. Batch-fetch images from Fandom API (async)
+    async def _fetch_all() -> dict[str, str | None]:
+        imgs: dict[str, str | None] = {}
+        async with httpx.AsyncClient(
+            headers={"User-Agent": "TomicaCollect-Scraper/1.0 (personal project)"},
+            follow_redirects=True,
+        ) as ac:
+            for i in range(0, len(titles), 20):
+                batch = titles[i : i + 20]
+                chunk = await _get_page_images(ac, batch)
+                imgs.update(chunk)
+                if i % 500 == 0 and i > 0:
+                    print(f"    images {i}/{len(titles)}...")
+        return imgs
+
+    images = asyncio.run(_fetch_all())
+    found = sum(1 for v in images.values() if v)
+    print(f"  Got images for {found}/{len(titles)} titles")
+
+    # 3. PATCH image_url back into Supabase
+    updated = not_found = failed = 0
+    patch_headers = {**headers, "Prefer": "return=minimal"}
+
+    with httpx.Client(timeout=30) as client:
+        for title, img_url in images.items():
+            ids = title_to_ids.get(title, [])
+            for row_id in ids:
+                if not img_url:
+                    not_found += 1
+                    continue
+                resp = client.patch(
+                    f"{base_url}?id=eq.{row_id}",
+                    headers=patch_headers,
+                    json={"image_url": img_url},
+                )
+                if resp.status_code < 300:
+                    updated += 1
+                else:
+                    print(f"  PATCH failed {row_id}: {resp.status_code}")
+                    failed += 1
+
+    return {"updated": updated, "not_found": not_found, "failed": failed}
+
+
 def import_to_supabase(items: list[dict], service_role_key: str, supabase_url: str) -> dict:
     """Insert fandom items into Supabase tomica_catalog via REST API.
 

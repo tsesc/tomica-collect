@@ -134,7 +134,7 @@ export function CatalogPage() {
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 md:py-5">
       {/* Series tabs */}
-      <div className="overflow-x-auto scrollbar-hide mb-3 border-b border-outline-variant/20">
+      <div className="overflow-x-auto overflow-y-hidden scrollbar-hide mb-3 border-b border-outline-variant/20">
         <div className="flex gap-1 min-w-max">
           {SERIES_TABS.map((tab) => (
             <button
@@ -179,7 +179,7 @@ export function CatalogPage() {
 
       {/* Number range tabs — only for numbered series (regular / fandom) */}
       {isNumbered && (
-        <div className="mb-3 overflow-x-auto scrollbar-hide">
+        <div className="mb-3 overflow-x-auto overflow-y-hidden scrollbar-hide">
           <div className="flex gap-1.5 min-w-max">
             {NUMBER_RANGES.map((r) => (
               <button
@@ -199,7 +199,7 @@ export function CatalogPage() {
       )}
 
       {/* Filter chips row */}
-      <div className="mb-3 overflow-x-auto scrollbar-hide">
+      <div className="mb-3 overflow-x-auto overflow-y-hidden scrollbar-hide">
         <div className="flex gap-3 min-w-max items-center">
           {/* Year filter */}
           <div className="flex items-center gap-1.5">

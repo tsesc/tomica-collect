@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRecognition } from '../hooks/useRecognition'
 import { useCollection } from '../hooks/useCollection'
+import { useSubmitCatalog } from '../hooks/useSubmitCatalog'
 import { ConfidenceRing } from '../components/ConfidenceRing'
 import { SubmitCatalogModal } from '../components/SubmitCatalogModal'
 import { translateCarName } from '../lib/translate'
@@ -83,6 +84,7 @@ export function ScanResultPage() {
   const navigate = useNavigate()
   const { result, status, error, capturedImage, reset } = useRecognition()
   const { addToCollection } = useCollection()
+  const { submit: submitCatalog, submitting: quickSubmitting, error: quickError } = useSubmitCatalog()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -167,6 +169,34 @@ export function ScanResultPage() {
       reset()
       navigate('/catalog')
     } catch {} finally { setSaving(false) }
+  }
+
+  // Best name we can extract from AI features
+  const aiCarName = ((features.car_name as string) ?? (topGuesses[0] ?? '')).trim()
+  const aiSeries = SERIES_NORMALIZE[((features.series as string) ?? '').toLowerCase().trim()] ?? 'regular'
+
+  // Show quick-contribute when AI gave us at least a name + we have an image,
+  // and AI did not produce a high-confidence match.
+  const canQuickContribute = !!capturedImage && aiCarName.length >= 2 && !hasGoodMatch
+
+  async function handleQuickContribute() {
+    if (!capturedImage || !aiCarName) return
+    const result = await submitCatalog({
+      car_name: aiCarName,
+      series: aiSeries,
+      model_number: ((features.model_number as string) ?? '').trim() || undefined,
+      manufacturer: ((features.manufacturer as string) ?? '').trim() || undefined,
+      primary_color: ((features.primary_color as string) ?? (features.body_color as string) ?? '').trim().toLowerCase() || undefined,
+      secondary_color: ((features.secondary_color as string) ?? '').trim().toLowerCase() || undefined,
+      vehicle_category: ((features.vehicle_category as string) ?? '').trim().toLowerCase() || undefined,
+      body_style: ((features.body_style as string) ?? '').trim().toLowerCase() || undefined,
+      notes: '由 AI 掃描自動建立',
+      image_base64: capturedImage,
+    })
+    if (!result) return
+    addToCollection(result.item.id).catch(() => {})
+    reset()
+    navigate('/catalog')
   }
 
   return (
@@ -263,9 +293,18 @@ export function ScanResultPage() {
             {saving ? '儲存中...' : '確認並加入收藏'}
           </button>
         )}
+        {canQuickContribute && (
+          <button onClick={handleQuickContribute} disabled={quickSubmitting}
+            className="w-full py-3.5 rounded-xl bg-tertiary text-white font-semibold text-sm shadow-sm disabled:opacity-50">
+            {quickSubmitting ? '建立中⋯' : `⚡ 一鍵貢獻並收藏「${aiCarName}」`}
+          </button>
+        )}
+        {quickError && (
+          <div className="text-xs text-error bg-error/5 border border-error/20 rounded-lg p-2.5">{quickError}</div>
+        )}
         <button onClick={() => setSubmitOpen(true)}
           className="w-full py-3 rounded-xl bg-white border border-primary/30 text-primary font-semibold text-sm">
-          {hasGoodMatch ? '都不是？建立新條目' : '＋ 圖鑑沒有，貢獻新條目'}
+          {hasGoodMatch ? '都不是？編輯後建立' : (canQuickContribute ? '想先檢查／補資料？編輯後建立' : '＋ 圖鑑沒有，貢獻新條目')}
         </button>
         <button onClick={() => { reset(); navigate('/catalog') }}
           className="w-full py-3 rounded-xl bg-surface-container-high text-on-surface-variant font-semibold text-sm">

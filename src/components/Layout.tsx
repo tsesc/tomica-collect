@@ -20,7 +20,7 @@ export function Layout() {
         <TopNav />
       </div>
 
-      <main className="flex-1 overflow-y-auto overscroll-none">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden overscroll-none">
         <Outlet />
       </main>
 

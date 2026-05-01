@@ -134,20 +134,26 @@ export function CatalogPage() {
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-6 py-3 md:py-5">
       {/* Series tabs */}
-      <div className="flex gap-1 mb-3 border-b border-outline-variant/20">
-        {SERIES_TABS.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => { setSeries(tab.value as Series); setYear(null) }}
-            className={`px-4 py-2 text-sm font-semibold transition-all border-b-2 -mb-px
-              ${series === tab.value
-                ? 'border-primary text-primary'
-                : 'border-transparent text-on-surface-variant hover:text-on-surface'
-              }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="overflow-x-auto scrollbar-hide mb-3 border-b border-outline-variant/20">
+        <div className="flex gap-1 min-w-max">
+          {SERIES_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={(e) => {
+                setSeries(tab.value as Series)
+                setYear(null)
+                e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+              }}
+              className={`px-4 py-2 text-sm font-semibold transition-all border-b-2 -mb-px whitespace-nowrap
+                ${series === tab.value
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Search bar */}

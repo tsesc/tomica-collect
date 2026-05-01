@@ -31,6 +31,7 @@ export function CatalogCard({ item, isCollected, onClick }: Props) {
           <img
             src={item.image_url}
             alt={item.car_name}
+            referrerPolicy="no-referrer"
             className="w-full h-full object-contain p-1.5 group-hover:scale-105 transition-transform"
           />
         ) : (

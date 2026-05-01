@@ -159,7 +159,7 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
         {/* Image */}
         <div className="aspect-square bg-surface-container-low flex items-center justify-center">
           {item.image_url ? (
-            <img src={item.image_url} alt={item.car_name} className="w-full h-full object-contain p-6" />
+            <img src={item.image_url} alt={item.car_name} referrerPolicy="no-referrer" className="w-full h-full object-contain p-6" />
           ) : (
             <div className="flex flex-col items-center gap-2 text-on-surface-variant/30">
               <span className="text-6xl">🚗</span>

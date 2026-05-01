@@ -56,7 +56,7 @@ export function HomePage() {
         {recent.map((item) => (
           <div key={item.id} className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm">
             <div className="w-12 h-12 bg-surface-container-low rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
-              {item.catalog?.image_url ? <img src={item.catalog.image_url} alt="" className="w-full h-full object-contain rounded-lg" /> : '🚗'}
+              {item.catalog?.image_url ? <img src={item.catalog.image_url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-contain rounded-lg" /> : '🚗'}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold truncate">{item.catalog?.model_number} {item.catalog?.car_name}</div>

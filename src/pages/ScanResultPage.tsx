@@ -48,7 +48,7 @@ function CandidateCard({ candidate, isSelected, onSelect }: {
     >
       <div className="w-16 h-16 shrink-0 bg-surface-container-low rounded-lg flex items-center justify-center overflow-hidden">
         {candidate.catalog_item.image_url
-          ? <img src={candidate.catalog_item.image_url} alt="" className="w-full h-full object-contain p-1" />
+          ? <img src={candidate.catalog_item.image_url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-contain p-1" />
           : <span className="text-2xl">🚗</span>}
       </div>
       <div className="flex-1 min-w-0">

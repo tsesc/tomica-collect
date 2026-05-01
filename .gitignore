@@ -9,3 +9,4 @@ scraper/data/
 scraper/.venv/
 __pycache__/
 .wrangler/
+.playwright-mcp/

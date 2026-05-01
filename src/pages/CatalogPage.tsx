@@ -5,6 +5,7 @@ import { useCollection } from '../hooks/useCollection'
 import { useAuth } from '../hooks/useAuth'
 import { CatalogCard } from '../components/CatalogCard'
 import { CarDetailModal } from '../components/CarDetailModal'
+import { SubmitCatalogModal } from '../components/SubmitCatalogModal'
 import type { CatalogItem, Series } from '../lib/types'
 
 const SERIES_TABS: { value: Series; label: string }[] = [
@@ -84,6 +85,8 @@ export function CatalogPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [vehicleCategory, setVehicleCategory] = useState<string | null>(null)
   const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [submitOpen, setSubmitOpen] = useState(false)
+  const [justSubmitted, setJustSubmitted] = useState<CatalogItem | null>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const isRegular = series === 'regular'
@@ -322,8 +325,8 @@ export function CatalogPage() {
       </div>
 
       {/* Stats bar */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <div className="text-xs text-on-surface-variant">
+      <div className="flex items-center justify-between mb-3 px-1 gap-3">
+        <div className="text-xs text-on-surface-variant truncate">
           {numberRange !== 'all' && isRegular && `No.${numberRange.split('-')[0]}–${numberRange.split('-')[1]}`}
           {numberRange !== 'all' && isRegular && (search || year) && ' · '}
           {search && '搜尋結果'}
@@ -338,6 +341,14 @@ export function CatalogPage() {
             </>
           )}
         </div>
+        {user && (
+          <button
+            onClick={() => setSubmitOpen(true)}
+            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/15 transition-all whitespace-nowrap"
+          >
+            + 貢獻
+          </button>
+        )}
       </div>
 
       {/* Grid */}
@@ -365,9 +376,17 @@ export function CatalogPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16">
-          <div className="text-4xl mb-3">🔍</div>
+        <div className="text-center py-16 px-6 space-y-3">
+          <div className="text-4xl">🔍</div>
           <p className="text-sm text-on-surface-variant">沒有找到符合條件的車種</p>
+          {user && (
+            <button
+              onClick={() => setSubmitOpen(true)}
+              className="mx-auto px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold shadow-sm"
+            >
+              + 找不到？貢獻一筆
+            </button>
+          )}
         </div>
       )}
 
@@ -377,6 +396,31 @@ export function CatalogPage() {
           item={selectedItem}
           isCollected={collectedIds.has(selectedItem.id)}
           onClose={() => setSelectedItem(null)}
+          onToggleCollection={user ? handleToggleCollection : undefined}
+          collectionLoading={actionLoading}
+        />
+      )}
+
+      {/* Submit modal */}
+      {submitOpen && (
+        <SubmitCatalogModal
+          prefill={{
+            series: search ? series : series,
+            car_name: search,
+            primary_color: selectedColors[0],
+            vehicle_category: vehicleCategory ?? undefined,
+          }}
+          onClose={() => setSubmitOpen(false)}
+          onSuccess={(item) => setJustSubmitted(item)}
+        />
+      )}
+
+      {/* Toast on success — auto-show detail */}
+      {justSubmitted && (
+        <CarDetailModal
+          item={justSubmitted}
+          isCollected={collectedIds.has(justSubmitted.id)}
+          onClose={() => { setJustSubmitted(null); window.location.reload() }}
           onToggleCollection={user ? handleToggleCollection : undefined}
           collectionLoading={actionLoading}
         />

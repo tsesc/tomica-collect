@@ -180,6 +180,12 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
               {item.source === 'community' && (
                 <span className="px-2 py-0.5 bg-outline/10 text-on-surface-variant text-xs font-medium rounded">歷代</span>
               )}
+              {(item.source === 'user' || item.submission_status === 'user') && (
+                <span className="px-2 py-0.5 bg-tertiary/10 text-tertiary text-xs font-medium rounded">玩家提供</span>
+              )}
+              {item.submission_status === 'user' && item.verified === false && (
+                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">未驗證</span>
+              )}
             </div>
             {/* Translated name */}
             <h2 className="text-base font-semibold text-on-surface leading-snug">

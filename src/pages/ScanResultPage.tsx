@@ -3,10 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { useRecognition } from '../hooks/useRecognition'
 import { useCollection } from '../hooks/useCollection'
 import { ConfidenceRing } from '../components/ConfidenceRing'
+import { SubmitCatalogModal } from '../components/SubmitCatalogModal'
 import { translateCarName } from '../lib/translate'
 import { getItemCode } from '../lib/types'
-import type { RecognitionCandidate } from '../lib/types'
+import type { RecognitionCandidate, Series } from '../lib/types'
 import { CATEGORY_ZH, COLOR_ZH } from '../lib/display'
+
+const SERIES_NORMALIZE: Record<string, Series> = {
+  'トミカ': 'regular', 'tomica': 'regular',
+  'トミカプレミアム': 'premium', 'tomica premium': 'premium', 'premium': 'premium',
+  'プレミアムアンリミテッド': 'premium_unlimited', 'premium unlimited': 'premium_unlimited',
+  'トミカリミテッドヴィンテージ': 'limited_vintage', 'limited vintage': 'limited_vintage', 'tlv': 'limited_vintage',
+  'dream tomica': 'dream', 'dream': 'dream', 'ドリームトミカ': 'dream',
+  'disney tomica': 'disney', 'disney': 'disney',
+  'cars tomica': 'cars', 'cars': 'cars',
+}
 
 const FEATURE_LABELS: Record<string, string> = {
   manufacturer: '製造商',
@@ -74,6 +85,7 @@ export function ScanResultPage() {
   const { addToCollection } = useCollection()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [submitOpen, setSubmitOpen] = useState(false)
 
   if (status === 'loading') {
     return (
@@ -251,11 +263,37 @@ export function ScanResultPage() {
             {saving ? '儲存中...' : '確認並加入收藏'}
           </button>
         )}
+        <button onClick={() => setSubmitOpen(true)}
+          className="w-full py-3 rounded-xl bg-white border border-primary/30 text-primary font-semibold text-sm">
+          {hasGoodMatch ? '都不是？建立新條目' : '＋ 圖鑑沒有，貢獻新條目'}
+        </button>
         <button onClick={() => { reset(); navigate('/catalog') }}
           className="w-full py-3 rounded-xl bg-surface-container-high text-on-surface-variant font-semibold text-sm">
           手動搜尋圖鑑
         </button>
       </div>
+
+      {submitOpen && (
+        <SubmitCatalogModal
+          prefill={{
+            car_name: (features.car_name as string) ?? (features.top_guesses as string[] | undefined)?.[0] ?? '',
+            series: SERIES_NORMALIZE[((features.series as string) ?? '').toLowerCase().trim()] ?? 'regular',
+            model_number: (features.model_number as string) ?? '',
+            manufacturer: (features.manufacturer as string) ?? '',
+            primary_color: (features.primary_color as string) ?? (features.body_color as string) ?? '',
+            vehicle_category: (features.vehicle_category as string) ?? '',
+            body_style: (features.body_style as string) ?? '',
+            image_base64: capturedImage ?? undefined,
+          }}
+          onClose={() => setSubmitOpen(false)}
+          onSuccess={(item) => {
+            // After contribution, add to collection automatically
+            addToCollection(item.id).catch(() => {})
+            reset()
+            navigate('/catalog')
+          }}
+        />
+      )}
     </div>
   )
 }

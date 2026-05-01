@@ -41,12 +41,17 @@ export interface CatalogItem {
   release_date: string | null
   retired: boolean
   image_url: string | null
-  source: 'official' | 'community' | 'manual'
+  source: 'official' | 'community' | 'manual' | 'user'
   variant: number | null
   release_start: string | null
   release_end: string | null
   attributes: VehicleAttributes | null
   metadata: Record<string, unknown>
+  submitted_by?: string | null
+  verified?: boolean
+  submission_status?: 'official' | 'user' | 'disputed' | 'rejected'
+  submission_notes?: string | null
+  image_hash?: string | null
 }
 
 export interface CollectionItem {

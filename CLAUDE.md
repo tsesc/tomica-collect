@@ -65,6 +65,26 @@ Python Scraper (uv + httpx + Pillow)
 5. Frontend queries DB with JSONB attribute filters
 6. AI recognition uses attributes for pre-filter + weighted scoring
 
+### Frontend Routing (App.tsx)
+- `/catalog` — public (no auth required)
+- `/`, `/scan-result`, `/collection`, `/settings` — `<ProtectedRoute>` (requires Supabase auth)
+- `/auth` — login/signup
+
+Pages never call Supabase directly — all data access goes through hooks in `src/hooks/`.
+
+### Frontend Key Patterns
+- **Client-side search**: `lib/search.ts` tokenizes with multilingual synonyms (JA/EN/ZH-TW/ZH-CN) — no DB text search used
+- **Client-side numeric sort**: `useCatalog` extracts numbers from `model_number` for correct No.1 < No.10 ordering (DB text sort breaks this)
+- **JSONB attribute queries**: `eq('attributes->>vehicle_category', ...)` and `in('attributes->>primary_color', [...])` with GIN index
+- **Image compression**: `lib/image.ts` compresses client-side before sending to `/api/identify`
+- **Display codes**: `getItemCode()` in `lib/types.ts` generates codes like "No.1-7", "LV-86h", "TP.08"
+
+### Design System ("Diecast Heritage")
+Tokens in `src/index.css` via Tailwind v4 `@theme`:
+- Primary red: `#af101a` / Container red: `#D32F2F`
+- Fonts: Manrope (display), Inter (body), Material Symbols (icons)
+- `scrollbar-hide` CSS class for horizontal scroll areas, `line-clamp-2` for card text
+
 ### Database (Supabase, project ref: qhvtipfmxfdlpolckubb)
 - **tomica_catalog**: 2,118 models. `attributes JSONB` with GIN index for filter queries. RLS: `anon` + `authenticated` SELECT.
 - **user_collection**: UNIQUE(user_id, catalog_id). RLS: own data only.

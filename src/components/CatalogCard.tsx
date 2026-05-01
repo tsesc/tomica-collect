@@ -10,6 +10,7 @@ interface Props {
 
 export function CatalogCard({ item, isCollected, onClick }: Props) {
   const isHistorical = item.source === 'community'
+  const isUserSubmitted = item.source === 'user' || item.submission_status === 'user'
   const code = getItemCode(item)
   const { displayName, manufacturer } = translateCarName(item.car_name, item.manufacturer)
 
@@ -23,6 +24,11 @@ export function CatalogCard({ item, isCollected, onClick }: Props) {
       {/* Collection badge */}
       {isCollected && (
         <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-success text-white rounded-full flex items-center justify-center text-[10px] font-bold z-10 shadow-sm">✓</div>
+      )}
+
+      {/* User-submitted badge */}
+      {isUserSubmitted && (
+        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-tertiary/95 text-white rounded text-[8px] font-bold z-10 shadow-sm tracking-wide">玩家</div>
       )}
 
       {/* Image */}

@@ -29,10 +29,21 @@ export function useAuth() {
     if (error) throw error
   }
 
+  async function signInWithGoogle() {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        queryParams: { access_type: 'offline', prompt: 'consent' },
+      },
+    })
+    if (error) throw error
+  }
+
   async function signOut() {
     const { error } = await supabase.auth.signOut()
     if (error) throw error
   }
 
-  return { user, loading, signIn, signUp, signOut }
+  return { user, loading, signIn, signUp, signInWithGoogle, signOut }
 }

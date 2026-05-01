@@ -315,7 +315,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
-    const anonClient = createClient(env.SUPABASE_URL, authHeader.replace('Bearer ', ''))
     const { data: { user }, error: authError } = await createClient(
       env.SUPABASE_URL,
       env.SUPABASE_SERVICE_ROLE_KEY
@@ -401,10 +400,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       { headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err)
-    console.error('identify error:', errMsg, err)
+    console.error('identify error:', err instanceof Error ? err.message : String(err), err)
     return new Response(
-      JSON.stringify({ error: `Recognition failed: ${errMsg}` }),
+      JSON.stringify({ error: 'Recognition failed. Please try again.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

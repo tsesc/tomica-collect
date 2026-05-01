@@ -20,6 +20,7 @@ from .classify import classify_batch
 from .color_extract import extract_colors_batch
 from .image_search import batch_search_images
 from .output import write_json, write_sql_seed
+from .fandom import scrape_fandom, import_to_supabase as fandom_import_to_supabase, fetch_fandom_images
 
 
 def _backup(data_dir: Path, filename: str) -> Path | None:
@@ -607,6 +608,56 @@ def main():
         if nulled:
             print(f"  {nulled} variants cleared — run 'scrape find-images' to re-search them")
         return
+
+    elif len(args) >= 1 and args[0] == "fandom":
+        import os
+        print("Scraping Tomica data from tomica.fandom.com...")
+        items = asyncio.run(scrape_fandom())
+        print(f"\nTotal unique items: {len(items)}")
+        output_path = data_dir / "fandom.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
+
+        # Auto-import if service role key is available
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        if service_key:
+            print("\nImporting to Supabase...")
+            result = fandom_import_to_supabase(items, service_key, supabase_url)
+            print(f"Done! inserted={result['inserted']}, failed={result['failed']}")
+        else:
+            print("\nNo SUPABASE_SERVICE_ROLE_KEY set — run 'scrape fandom-import' to import.")
+        print("Done!")
+
+    elif len(args) >= 1 and args[0] == "fandom-images":
+        import os
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        if not service_key:
+            print("Error: SUPABASE_SERVICE_ROLE_KEY env var required")
+            sys.exit(1)
+        print("Fetching Fandom wiki images for catalog records...")
+        result = fetch_fandom_images(service_key, supabase_url)
+        print(f"Done! updated={result['updated']}, not_found={result['not_found']}, failed={result['failed']}")
+
+    elif len(args) >= 1 and args[0] == "fandom-import":
+        import os
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        if not service_key:
+            print("Error: SUPABASE_SERVICE_ROLE_KEY env var required")
+            sys.exit(1)
+
+        fandom_path = data_dir / "fandom.json"
+        if not fandom_path.exists():
+            print("No fandom.json found — run 'scrape fandom' first")
+            sys.exit(1)
+
+        items = json.loads(fandom_path.read_text())
+        print(f"Importing {len(items)} items from {fandom_path} to Supabase...")
+        result = fandom_import_to_supabase(items, service_key, supabase_url)
+        print(f"Done! inserted={result['inserted']}, failed={result['failed']}")
 
     elif len(args) >= 1 and args[0] == "dedup":
         report = dedup_report(data_dir)

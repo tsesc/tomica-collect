@@ -26,13 +26,27 @@ export function SettingsPage() {
   async function handleSave() {
     if (!user) return
     setSaving(true)
-    const { error } = await supabase.from('user_settings').upsert({ user_id: user.id, ai_provider: provider, api_keys: { [provider]: apiKey } })
-    setSaving(false)
-    if (error) alert(error.message)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const body: Record<string, string> = { ai_provider: provider }
+      if (apiKey && apiKey !== '••••••••') body.api_key = apiKey
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        alert(err.error || '儲存失敗')
+      }
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleTest() {
     setTestStatus('testing')
+    // Format-only validation (no actual network call)
     const valid = (provider === 'openai' && apiKey.startsWith('sk-')) || (provider === 'gemini' && apiKey.length > 20) || (provider === 'claude' && apiKey.startsWith('sk-ant-'))
     setTestStatus(valid ? 'success' : 'error')
   }

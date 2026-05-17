@@ -86,10 +86,14 @@ Tokens in `src/index.css` via Tailwind v4 `@theme`:
 - `scrollbar-hide` CSS class for horizontal scroll areas, `line-clamp-2` for card text
 
 ### Database (Supabase, project ref: qhvtipfmxfdlpolckubb)
-- **tomica_catalog**: 2,118 models. `attributes JSONB` with GIN index for filter queries. RLS: `anon` + `authenticated` SELECT.
+- **tomica_catalog**: ~11,128 models (incl. Fandom imports). `attributes JSONB` with GIN index. Adds `variant_of_id` (parent/child variants, two-level only via trigger), `correction_hints` (AI feedback hints), `search_tsv` (FTS GENERATED column). Public SELECT; admin-only UPDATE/DELETE on official rows; users can write their own unverified submissions.
 - **user_collection**: UNIQUE(user_id, catalog_id). RLS: own data only.
-- **recognition_log**: AI scan history.
+- **recognition_log**: AI scan history. `original_top1_catalog_id` / `user_chosen_catalog_id` capture AI vs. user choice for the feedback loop.
 - **user_settings**: BYOK API keys (plaintext JSONB). Auto-created via trigger on signup.
+- **admins**: source of truth for admin role; `is_admin(uid)` SECURITY DEFINER function used by RLS. Granted only via SQL Editor.
+- **attribute_suggestions**: user-proposed attribute corrections. Anyone can SELECT, users INSERT/DELETE own pending, admins UPDATE.
+- **catalog_edit_history**: append-only audit trail. Writes only via service role; SELECT for all authenticated.
+- **admin_pending_queue** (view): unified review queue (`kind ∈ {submission, suggestion}`).
 
 ### Local Docker Backup
 ```bash
@@ -110,6 +114,13 @@ docker start tomica-postgres  # Port 54320, user: tomica, pass: tomica_local, db
 
 ## Known Issues / TODO
 - [ ] API keys stored as plaintext JSONB — `pgcrypto` enabled but unused
-- [ ] No rate limiting on Cloudflare Functions
+- [ ] No rate limiting on most Cloudflare Functions (submit-catalog has 10/day)
 - [ ] SettingsPage writes directly to DB instead of via `/api/settings`
 - [ ] useRecognition state doesn't persist across navigation (HomePage → ScanResultPage)
+- [ ] Contribution workflow (migration 005) — schema only, runtime pieces still pending:
+  - [ ] No admin dashboard UI (currently runs through Supabase SQL Editor, see README "Admin / Backend Operations")
+  - [ ] `/api/suggest-edit` endpoint not built (frontend has no UI to propose attribute corrections)
+  - [ ] `/api/log-correction` endpoint not built (`recognition_log.user_chosen_catalog_id` never gets written)
+  - [ ] `scraper/src/tomica_scraper/feedback_analyzer.py` cron not built (`correction_hints` JSONB never populated → `matchCandidates()` has no hints to consume)
+  - [ ] FTS not wired into `useCatalog` — search still 100% client-side via `lib/search.ts`
+  - [ ] `SubmitCatalogModal` doesn't expose `variant_of_id` (variant management has no UI yet)

@@ -42,6 +42,88 @@ Open-source Tomica die-cast car collection tracker with AI photo recognition.
 - On the Catalog page, use the "Collection" filter to see owned vs missing
 - Tap any car card to view details and toggle collection status
 
+### Contribute to the Catalog
+
+When AI scan can't find a match, or you spot a missing/incorrect entry:
+
+- **Add a new car** — On the catalog page (or post-scan when AI misses), tap **"+ 新增條目"** or **"⚡ 一鍵貢獻並收藏"**. Upload a photo + fill basic details. The entry lands in the shared catalog as `submission_status='user'` / `verified=false`, immediately searchable by everyone.
+- **Suggest an attribute fix** — On any car detail modal, tap **"建議修正"** to propose a change to color, vehicle category, etc. Goes into the admin queue.
+- **Mark a variant** — When adding a new car, you can tag it as a variant of an existing model (e.g., "2010 紀念色" of No.43). Variants are limited to two levels (parent → child only).
+
+Rate limits: 10 submissions per user per day. Image dedup uses SHA-256 hash.
+
+## Admin / Backend Operations
+
+The "backend" (admin role) is granted via the `admins` table — no separate dashboard URL. Admins can review user submissions and attribute suggestions.
+
+### Granting admin
+
+```sql
+-- Run in Supabase SQL Editor (admin granting can only be done with service role)
+INSERT INTO admins (user_id)
+SELECT id FROM auth.users WHERE email = 'YOUR_EMAIL@example.com'
+ON CONFLICT DO NOTHING;
+```
+
+To revoke: `DELETE FROM admins WHERE user_id = '<uid>';`
+
+### Reviewing the queue
+
+The unified `admin_pending_queue` view shows everything awaiting review:
+
+```sql
+-- See all pending work, oldest first
+SELECT kind, item_id, catalog_id, user_id, created_at, payload
+FROM admin_pending_queue
+ORDER BY created_at;
+```
+
+`kind` is either `submission` (a new user-contributed catalog entry) or `suggestion` (an attribute change proposed for an existing entry). The `payload` JSONB contains the relevant details for each.
+
+### Approving a user submission
+
+```sql
+-- Promote a user-contributed entry to verified/official status
+UPDATE tomica_catalog
+SET verified = true, submission_status = 'official'
+WHERE id = '<catalog_id>';
+```
+
+### Approving / rejecting an attribute suggestion
+
+```sql
+-- Approve: apply the suggested value to the catalog row, mark the suggestion approved
+WITH s AS (
+  SELECT * FROM attribute_suggestions WHERE id = '<suggestion_id>'
+)
+UPDATE attribute_suggestions
+SET status = 'approved',
+    reviewed_by = auth.uid(),
+    reviewed_at = now()
+WHERE id = '<suggestion_id>';
+-- Then manually apply the change to tomica_catalog using the field/new_value
+-- (a server-side endpoint to atomically do both is on the roadmap)
+
+-- Reject:
+UPDATE attribute_suggestions
+SET status = 'rejected',
+    admin_note = 'reason here',
+    reviewed_by = auth.uid(),
+    reviewed_at = now()
+WHERE id = '<suggestion_id>';
+```
+
+### Viewing edit history
+
+```sql
+SELECT edited_at, edited_by, source, changed_fields
+FROM catalog_edit_history
+WHERE catalog_id = '<catalog_id>'
+ORDER BY edited_at DESC;
+```
+
+> **Note**: An in-app admin dashboard with one-click approve/reject is on the roadmap. For now, all admin actions go through the Supabase SQL Editor.
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -72,12 +154,23 @@ pnpm install
 
 ### 2. Configure Supabase
 
-Create a Supabase project, then run the migrations:
+Create a Supabase project, then run the migrations **in order**:
 
 ```bash
-# In Supabase SQL Editor, run:
-supabase/migrations/001_initial_schema.sql
-supabase/migrations/002_add_release_dates.sql
+# In Supabase SQL Editor, run each file:
+supabase/migrations/001_initial_schema.sql        # core tables + RLS
+supabase/migrations/002_add_release_dates.sql     # release_start/end
+supabase/migrations/003_add_attributes.sql        # attributes JSONB
+supabase/migrations/004_user_submissions.sql      # user-contributed entries + storage bucket
+supabase/migrations/005_contribution_workflow.sql # admin role + suggestions + FTS
+```
+
+After migration 005 runs, bootstrap your admin account (the email you signed up with on the live app):
+
+```sql
+INSERT INTO admins (user_id)
+SELECT id FROM auth.users WHERE email = 'YOUR_EMAIL@example.com'
+ON CONFLICT DO NOTHING;
 ```
 
 Create `.env` in the project root:

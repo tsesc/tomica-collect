@@ -405,6 +405,9 @@ def main():
         if not new_rows:
             print("Nothing to import — DB already up to date.")
             return
+        # PostgREST bulk insert requires identical keys on every row (PGRST102)
+        all_keys = set().union(*(row.keys() for row in new_rows))
+        new_rows = [{k: row.get(k) for k in sorted(all_keys)} for row in new_rows]
         result = fandom_import_to_supabase(new_rows, service_key, supabase_url)
         print(f"Done! inserted={result['inserted']}, failed={result['failed']}")
         return
@@ -468,6 +471,7 @@ def main():
 
         # Save SQL file
         output_path = data_dir / "classify_updates.sql"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text("\n".join(sql_lines))
         print(f"SQL saved: {len(sql_lines)} statements → {output_path}")
 

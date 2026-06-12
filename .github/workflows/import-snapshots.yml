@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'data/snapshots/**'
+  workflow_dispatch:
 
 concurrency:
   group: import-snapshots

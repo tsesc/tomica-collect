@@ -2,9 +2,10 @@
 
 import asyncio
 import json
+import re
 import shutil
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from .tomica import scrape_regular_series
 from .history import scrape_all_history
@@ -19,8 +20,33 @@ from .enrich import enrich_batch
 from .classify import classify_batch
 from .color_extract import extract_colors_batch
 from .image_search import batch_search_images
+from .monthly_new import scrape_monthly_new
 from .output import write_json, write_sql_seed
-from .fandom import scrape_fandom, import_to_supabase as fandom_import_to_supabase, fetch_fandom_images
+from .fandom import (
+    scrape_fandom,
+    import_to_supabase as fandom_import_to_supabase,
+    fetch_fandom_images,
+    fandom_sync,
+    save_sync_state,
+    SyncStateMissing,
+    SYNC_STATE_FILE,
+)
+from .tomy_cn import scrape_tomy_cn
+from .tomicars_club import scrape_tomicars_club
+from .feedback_analyzer import run as analyze_feedback_run
+from . import changelog as changelog_mod
+
+# Whitelist of tomica_catalog columns accepted by `scrape import-snapshots`.
+# Snapshot JSON may carry extra scraper-only keys (is_neo, scale, era, price,
+# ...) that PostgREST would reject.
+CATALOG_COLUMNS = {
+    "model_number", "car_name", "car_name_en",
+    "car_name_zh_tw", "car_name_zh_hk", "car_name_zh_cn",
+    "series", "is_first_edition", "manufacturer", "vehicle_type",
+    "body_color", "release_date", "release_start", "release_end",
+    "retired", "retired_at", "image_url", "source", "metadata",
+}
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 def _backup(data_dir: Path, filename: str) -> Path | None:
@@ -145,9 +171,52 @@ def _cmd_recover(data_dir: Path, prefix: str) -> None:
         print(f"  + {item.get('model_number', '?')} {item.get('car_name', '?')}")
 
 
+USAGE = """\
+Usage: scrape [command] [options]
+
+Catalog scraping (default: regular series):
+  (no command)        Scrape current Tomica regular series (150 models)
+  history             Historical regular-series variants
+  tlv                 Tomica Limited Vintage (POST API)
+  dream               Dream Tomica
+  premium             Tomica Premium
+  unlimited           Premium Unlimited
+  cars                Cars Tomica
+  funbox              Taiwan retailer (funbox) data
+  fandom              Full Fandom wiki scrape
+  fandom-images       Fetch Fandom images
+  fandom-import       Import Fandom data into Supabase
+  fandom-sync [--init] [--no-images]
+                      Incremental Fandom sync (changed pages only)
+  tomy-cn             Official China site (zh-CN names)
+  tomicars-club       MANUAL-RUN ONLY (data license unconfirmed)
+  monthly-new [yymm]  Monthly new-product pages + snapshot changelog
+  import-snapshots    Import committed data/snapshots/**/*.json into Supabase
+
+Enrichment / maintenance:
+  classify            Rule-based attribute extraction (no AI)
+  extract-colors      Pillow pixel-based color extraction (no AI)
+  enrich-attributes   Gemini Flash AI attribute extraction (GEMINI_API_KEY)
+  enrich              Fill missing catalog fields from other sources
+  analyze-feedback [--apply] [--min-count N]
+                      recognition_log -> correction_hints
+  changelog           Re-print last generated changelog (no re-scrape)
+  find-images [N]     Gemini image search for items missing images
+  dedup               Cross-source dedup report
+  fix-dupes           Fix duplicate entries
+  diff <catalog|history>     Diff data files against backup
+  recover <catalog|history>  Merge items from backup
+"""
+
+
 def main():
     data_dir = Path(__file__).parent.parent / "data"
     args = sys.argv[1:]
+
+    # scrape --help / -h / help
+    if args and args[0] in ("--help", "-h", "help"):
+        print(USAGE)
+        return
 
     # scrape diff <catalog|history>
     if len(args) >= 2 and args[0] == "diff":
@@ -157,6 +226,187 @@ def main():
     # scrape recover <catalog|history>
     if len(args) >= 2 and args[0] == "recover":
         _cmd_recover(data_dir, args[1])
+        return
+
+    # scrape monthly-new [yymm] — monthly new-product pages + snapshot changelog
+    if len(args) >= 1 and args[0] == "monthly-new":
+        yymm = args[1] if len(args) > 1 else None
+        label = yymm or "current + next 3 months"
+        print(f"Scraping monthly new-product pages ({label})...")
+        items = asyncio.run(scrape_monthly_new(yymm))
+        print(f"Found {len(items)} new-product items")
+
+        _backup(data_dir, "monthly_new.json")
+        output_path = data_dir / "monthly_new.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
+
+        # Order matters: diff + retirement tracker BEFORE save_snapshot overwrites
+        diff = changelog_mod.diff_snapshot(items, "monthly_new")
+        confirmed = changelog_mod.update_retirement_tracker(items, diff)
+        report = changelog_mod.format_changelog(diff, confirmed)
+        print(report)
+        changelog_path = data_dir / "changelog.md"
+        changelog_path.write_text(report)
+        print(f"Changelog saved to {changelog_path}")
+        changelog_mod.save_snapshot(items, "monthly_new")
+        print("Done!")
+        return
+
+    # scrape changelog — re-print the last generated changelog (no re-scrape)
+    if len(args) >= 1 and args[0] == "changelog":
+        changelog_path = data_dir / "changelog.md"
+        if changelog_path.exists():
+            print(changelog_path.read_text())
+        else:
+            print("No changelog found — run 'scrape monthly-new' first.")
+        return
+
+    # scrape fandom-sync [--init] [--no-images] — incremental Fandom sync
+    if len(args) >= 1 and args[0] == "fandom-sync":
+        import os
+        if "--init" in args:
+            ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            save_sync_state(ts)
+            print(f"Initialized sync state ({ts}) at {SYNC_STATE_FILE}")
+            return
+
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        if not service_key:
+            print("Error: SUPABASE_SERVICE_ROLE_KEY env var required")
+            sys.exit(1)
+
+        fetch_images = "--no-images" not in args
+        try:
+            result = fandom_sync(service_key, supabase_url, fetch_images=fetch_images)
+        except SyncStateMissing as e:
+            print(e)
+            print("First run: use 'scrape fandom' for a full scrape, then 'scrape fandom-sync --init'")
+            sys.exit(1)
+        print(
+            f"Done! changed_pages={result['changed_pages']}, inserted={result['inserted']}, "
+            f"failed={result['failed']}, state_updated={result['state_updated']}"
+        )
+        return
+
+    # scrape tomy-cn — official China site (zh-CN names)
+    if len(args) >= 1 and args[0] == "tomy-cn":
+        print("Scraping Tomica from tomy.cn (zh-CN names)...")
+        items = asyncio.run(scrape_tomy_cn())
+        print(f"Found {len(items)} tomy.cn items")
+        _backup(data_dir, "tomy_cn.json")
+        output_path = data_dir / "tomy_cn.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
+        print("Done!")
+        return
+
+    # scrape tomicars-club — MANUAL-RUN ONLY (data license unconfirmed, never schedule)
+    if len(args) >= 1 and args[0] == "tomicars-club":
+        items = asyncio.run(scrape_tomicars_club())
+        print(f"Found {len(items)} tomicars.club releases")
+        _backup(data_dir, "tomicars_club.json")
+        output_path = data_dir / "tomicars_club.json"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+        print(f"Wrote {len(items)} items to {output_path}")
+        print("Done!")
+        return
+
+    # scrape analyze-feedback [--apply] [--min-count N] — recognition_log → correction_hints
+    if len(args) >= 1 and args[0] == "analyze-feedback":
+        analyze_feedback_run(args[1:])
+        return
+
+    # scrape import-snapshots — import committed data/snapshots/**/*.json into Supabase
+    if len(args) >= 1 and args[0] == "import-snapshots":
+        import os
+        import httpx as httpx_sync
+
+        supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+        service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        if not service_key:
+            print("Error: SUPABASE_SERVICE_ROLE_KEY env var required")
+            sys.exit(1)
+
+        snapshot_root = Path(__file__).parent.parent.parent / "data" / "snapshots"
+        if not snapshot_root.exists():
+            print(f"No snapshots directory at {snapshot_root}")
+            return
+
+        candidates: list[dict] = []
+        for path in sorted(snapshot_root.rglob("*.json")):
+            if path.name.startswith("_"):  # e.g. _pending_retirement.json
+                continue
+            try:
+                data = json.loads(path.read_text())
+            except ValueError:
+                print(f"  skip (invalid JSON): {path}")
+                continue
+            if not isinstance(data, list):
+                continue
+            count = 0
+            for raw in data:
+                if not isinstance(raw, dict):
+                    continue
+                if not raw.get("car_name") or not raw.get("series"):
+                    continue
+                row = {k: v for k, v in raw.items() if k in CATALOG_COLUMNS and v is not None}
+                row.setdefault("model_number", "")
+                row.setdefault("body_color", [])
+                row.setdefault("metadata", {})
+                # release_date is a DATE column — drop non-ISO values (e.g. "2024年4月")
+                rd = row.get("release_date")
+                if rd and not ISO_DATE_RE.match(str(rd)):
+                    row.pop("release_date")
+                candidates.append(row)
+                count += 1
+            print(f"  {path.relative_to(snapshot_root)}: {count} items")
+
+        if not candidates:
+            print("No snapshot items found.")
+            return
+
+        # Dedup against existing DB rows (tomica_catalog has no unique
+        # constraint, so a naive POST would duplicate the whole catalog).
+        headers = {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
+        base = f"{supabase_url}/rest/v1"
+        existing: set[tuple] = set()
+        offset = 0
+        while True:
+            resp = httpx_sync.get(
+                f"{base}/tomica_catalog?select=series,model_number,car_name&offset={offset}&limit=1000",
+                headers=headers, timeout=30,
+            )
+            resp.raise_for_status()
+            batch = resp.json()
+            if not batch:
+                break
+            for r in batch:
+                existing.add((r.get("series"), r.get("model_number") or "", r.get("car_name")))
+            offset += len(batch)
+            if len(batch) < 1000:
+                break
+        print(f"DB has {len(existing)} existing (series, model_number, car_name) keys")
+
+        seen = set(existing)
+        new_rows: list[dict] = []
+        for row in candidates:
+            key = (row.get("series"), row.get("model_number") or "", row.get("car_name"))
+            if key in seen:
+                continue
+            seen.add(key)
+            new_rows.append(row)
+
+        print(f"{len(candidates)} snapshot items → {len(new_rows)} new rows to insert")
+        if not new_rows:
+            print("Nothing to import — DB already up to date.")
+            return
+        result = fandom_import_to_supabase(new_rows, service_key, supabase_url)
+        print(f"Done! inserted={result['inserted']}, failed={result['failed']}")
         return
 
     # scrape enrich — fill missing catalog fields from other sources

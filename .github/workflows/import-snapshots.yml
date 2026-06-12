@@ -1,0 +1,47 @@
+name: Import Snapshots
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/snapshots/**'
+
+concurrency:
+  group: import-snapshots
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: scraper/uv.lock
+
+      - name: Import snapshots and classify
+        working-directory: scraper
+        env:
+          SUPABASE_URL_SECRET: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          export SUPABASE_URL="${SUPABASE_URL_SECRET:-https://qhvtipfmxfdlpolckubb.supabase.co}"
+          uv sync
+          uv run scrape import-snapshots
+          uv run scrape classify
+
+      - name: Notify Discord (failure)
+        if: failure() && env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\": \"Snapshot import FAILED: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$DISCORD_WEBHOOK_URL"

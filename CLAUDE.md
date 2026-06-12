@@ -33,9 +33,17 @@ uv run scrape unlimited           # Premium Unlimited 12 models
 uv run scrape classify            # Rule-based attribute extraction (no AI, instant)
 uv run scrape extract-colors      # Pillow pixel-based color extraction (no AI)
 uv run scrape enrich-attributes   # Gemini Flash AI attribute extraction (needs GEMINI_API_KEY)
-uv run scrape funbox              # Taiwan retailer data
+uv run scrape funbox              # Taiwan retailer data (incl. car_name_zh_tw)
+uv run scrape monthly-new [yymm]  # Monthly new-product pages (default: current + next 3 months) + changelog + snapshot diff
+uv run scrape changelog           # Re-print last generated changelog (no re-scrape)
+uv run scrape fandom-sync         # Incremental Fandom sync via RecentChanges (needs SUPABASE_SERVICE_ROLE_KEY; run `fandom-sync --init` once after a full `scrape fandom`)
+uv run scrape tomy-cn             # tomy.cn official China site (zh-CN names)
+uv run scrape tomicars-club       # tomicars.club archive — MANUAL ONLY, data license unconfirmed, never schedule
+uv run scrape analyze-feedback    # recognition_log → correction_hints (dry-run by default; --apply writes to DB)
+uv run scrape import-snapshots    # Import committed data/snapshots/**/*.json into Supabase (needs SUPABASE_SERVICE_ROLE_KEY)
 uv run scrape dedup               # Cross-source dedup report
 uv run identify photo.jpg         # Local image identification (no AI)
+uv run pytest                     # Scraper unit tests (fixture-based, no network)
 ```
 
 ### Deploy
@@ -43,6 +51,14 @@ uv run identify photo.jpg         # Local image identification (no AI)
 pnpm build && npx wrangler pages deploy dist --project-name tomica-collect --commit-dirty=true --commit-message="deploy"
 ```
 CI/CD: push to `main` → GitHub Actions (ci.yml: build + test, deploy.yml: Cloudflare Pages).
+
+### Scheduled Automation (GitHub Actions)
+- **monthly-scrape.yml** — cron Sat 18:17 UTC (JST Sun 03:17); only proceeds in the third-Saturday(+1 day, JST) release window (`workflow_dispatch` with `force=true` bypasses). Runs `scrape`, `scrape tlv`, `scrape monthly-new`, then opens PR `auto/monthly-scrape` committing `data/snapshots/{YYYY-MM}/` + rolling `data/snapshots/monthly_new.json`, with the changelog as PR body.
+- **import-snapshots.yml** — on push to `main` touching `data/snapshots/**`: runs `scrape import-snapshots` (dedup-aware insert into tomica_catalog) + `scrape classify`.
+- **weekly-fandom-sync.yml** — cron Mon 19:23 UTC: restores sync state from `data/fandom/fandom_sync_state.json`, runs `scrape fandom-sync` (bootstraps via full `scrape fandom` + `fandom-sync --init` when no state), opens PR `auto/fandom-sync` persisting the advanced state file.
+- Required secrets: `SUPABASE_SERVICE_ROLE_KEY` (import/sync DB writes). Optional: `SUPABASE_URL` (defaults to the qhvtipfmxfdlpolckubb project), `DISCORD_WEBHOOK_URL` (notifications, silently skipped if unset).
+- Repo setting: Actions → General → "Allow GitHub Actions to create and approve pull requests" must be enabled. PRs created by `GITHUB_TOKEN` do not trigger ci.yml (known limitation).
+- `scrape tomicars-club` must NEVER be added to these workflows (data license unconfirmed).
 
 ## Architecture
 
@@ -113,6 +129,8 @@ docker start tomica-postgres  # Port 54320, user: tomica, pass: tomica_local, db
 - `SUPABASE_SERVICE_ROLE_KEY` — for direct DB writes (optional, can use MCP instead)
 
 ## Known Issues / TODO
+- [ ] Migrations 006 (retired_at + current-lineup index) and 007 (car_name_zh_tw/zh_hk/zh_cn + search_tsv rebuild) not yet applied to the live DB — frontend types and scraper output already include the new columns
+- [ ] tomicars.club data license unconfirmed — `scrape tomicars-club` is manual-run only; contact the site owner before importing
 - [ ] API keys stored as plaintext JSONB — `pgcrypto` enabled but unused
 - [ ] No rate limiting on most Cloudflare Functions (submit-catalog has 10/day)
 - [ ] SettingsPage writes directly to DB instead of via `/api/settings`
@@ -121,6 +139,7 @@ docker start tomica-postgres  # Port 54320, user: tomica, pass: tomica_local, db
   - [ ] No admin dashboard UI (currently runs through Supabase SQL Editor, see README "Admin / Backend Operations")
   - [ ] `/api/suggest-edit` endpoint not built (frontend has no UI to propose attribute corrections)
   - [ ] `/api/log-correction` endpoint not built (`recognition_log.user_chosen_catalog_id` never gets written)
-  - [ ] `scraper/src/tomica_scraper/feedback_analyzer.py` cron not built (`correction_hints` JSONB never populated → `matchCandidates()` has no hints to consume)
-  - [ ] FTS not wired into `useCatalog` — search still 100% client-side via `lib/search.ts`
+  - [x] ~~feedback_analyzer not built~~ — done: `scraper/scraper/feedback_analyzer.py` + `uv run scrape analyze-feedback [--apply]` populates `correction_hints` (`{"confused_with": [{"catalog_id", "count"}], "updated_at"}` on the wrongly-picked row)
+  - [ ] `matchCandidates()` in `functions/api/identify.ts` still doesn't consume `correction_hints` — needs a boost for `confused_with` candidates
+  - [ ] FTS not wired into `useCatalog` — search still 100% client-side via `lib/search.ts` (now also indexes `car_name_zh_tw/zh_hk/zh_cn`)
   - [ ] `SubmitCatalogModal` doesn't expose `variant_of_id` (variant management has no UI yet)

@@ -1,0 +1,23 @@
+[
+  {
+    "title": "TOMICA No.072 Jeep Wrangler",
+    "url": "/products/tomica-no072",
+    "photo": "//cdn.funbox.example/no072.jpg",
+    "price": 75,
+    "variants": [{"sku": "XBTMTA072", "inventory_quantity": 3}]
+  },
+  {
+    "title": "TOMICA 亞版 No.126 恐龍聯結車 (一般色+初回色)",
+    "url": "/products/tomica-no126-x2",
+    "photo": "//cdn.funbox.example/no126.jpg",
+    "price": 150,
+    "variants": [{"sku": "XBTMTA126X2", "inventory_quantity": 0}]
+  },
+  {
+    "title": "2026 新春紀念車款抽抽樂 (一中盒6台)",
+    "url": "/products/lottery",
+    "photo": "",
+    "price": 450,
+    "variants": []
+  }
+]

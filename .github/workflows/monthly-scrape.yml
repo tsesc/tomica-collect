@@ -1,0 +1,109 @@
+name: Monthly Scrape
+
+on:
+  schedule:
+    # UTC Sat 18:17 = JST Sun 03:17 (the day after a Saturday release)
+    - cron: '17 18 * * 6'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Skip the third-Saturday window check
+        type: boolean
+        default: false
+
+concurrency:
+  group: monthly-scrape
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check release window (third Saturday + 0-1 days, JST)
+        id: window
+        run: |
+          month=$(TZ=Asia/Tokyo date +%Y-%m)
+          echo "month=$month" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
+            echo "Forced run — skipping window check."
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          today=$(TZ=Asia/Tokyo date +%Y-%m-%d)
+          first_dow=$(date -d "$month-01" +%u)              # Mon=1 .. Sun=7 (Sat=6)
+          offset=$(( (6 - first_dow + 7) % 7 ))
+          third_sat=$(date -d "$month-01 +$(( offset + 14 )) days" +%Y-%m-%d)
+          window_end=$(date -d "$third_sat +1 day" +%Y-%m-%d)
+          echo "today=$today third_sat=$third_sat window_end=$window_end"
+          if [[ "$today" < "$third_sat" || "$today" > "$window_end" ]]; then
+            echo "Outside release window — exiting early."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.window.outputs.run == 'true'
+
+      - uses: astral-sh/setup-uv@v5
+        if: steps.window.outputs.run == 'true'
+        with:
+          enable-cache: true
+          cache-dependency-glob: scraper/uv.lock
+
+      - name: Run scrapers
+        if: steps.window.outputs.run == 'true'
+        working-directory: scraper
+        run: |
+          uv sync
+          uv run scrape
+          uv run scrape tlv
+          uv run scrape monthly-new
+          uv run scrape changelog
+
+      - name: Collect snapshots
+        if: steps.window.outputs.run == 'true'
+        run: |
+          month="${{ steps.window.outputs.month }}"
+          mkdir -p "data/snapshots/$month"
+          find scraper/data -maxdepth 1 -name '*.json' -exec cp {} "data/snapshots/$month/" \;
+          if [ -f scraper/data/changelog.md ]; then
+            cp scraper/data/changelog.md "data/snapshots/$month/changelog.md"
+            cp scraper/data/changelog.md "$RUNNER_TEMP/pr-body.md"
+          else
+            echo "Automated monthly scrape for $month (no changelog generated)." > "$RUNNER_TEMP/pr-body.md"
+          fi
+
+      - name: Create pull request
+        id: cpr
+        if: steps.window.outputs.run == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: auto/monthly-scrape
+          delete-branch: true
+          add-paths: data/snapshots/**
+          commit-message: 'chore: Monthly scrape snapshot ${{ steps.window.outputs.month }}'
+          title: 'chore: Monthly scrape ${{ steps.window.outputs.month }}'
+          body-path: ${{ runner.temp }}/pr-body.md
+
+      - name: Notify Discord (new items)
+        if: steps.cpr.outputs.pull-request-url != '' && env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\": \"Monthly scrape ${{ steps.window.outputs.month }}: new catalog snapshot PR ${{ steps.cpr.outputs.pull-request-url }}\"}" \
+            "$DISCORD_WEBHOOK_URL"
+
+      - name: Notify Discord (failure)
+        if: failure() && env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\": \"Monthly scrape FAILED: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$DISCORD_WEBHOOK_URL"

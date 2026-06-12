@@ -176,6 +176,9 @@ export function buildSearchIndex(item: CatalogItem): string {
   parts.push(translated.displayName, translated.manufacturer, translated.vehicleType)
 
   if (item.car_name_en) parts.push(item.car_name_en)
+  if (item.car_name_zh_tw) parts.push(item.car_name_zh_tw)
+  if (item.car_name_zh_hk) parts.push(item.car_name_zh_hk)
+  if (item.car_name_zh_cn) parts.push(item.car_name_zh_cn)
   if (item.manufacturer) parts.push(item.manufacturer)
 
   // Add all attribute values

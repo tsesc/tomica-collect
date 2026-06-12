@@ -1,0 +1,78 @@
+name: Weekly Fandom Sync
+
+on:
+  schedule:
+    # Mon 19:23 UTC = JST Tue 04:23
+    - cron: '23 19 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-fandom-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: scraper/uv.lock
+
+      - name: Restore sync state from committed data
+        run: |
+          mkdir -p scraper/data
+          if [ -f data/fandom/fandom_sync_state.json ]; then
+            cp data/fandom/fandom_sync_state.json scraper/data/
+          fi
+
+      - name: Run Fandom incremental sync
+        working-directory: scraper
+        env:
+          SUPABASE_URL_SECRET: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          export SUPABASE_URL="${SUPABASE_URL_SECRET:-https://qhvtipfmxfdlpolckubb.supabase.co}"
+          uv sync
+          if uv run python -c "from scraper.fandom import load_sync_state; import sys; sys.exit(0 if load_sync_state() else 1)"; then
+            uv run scrape fandom-sync
+          else
+            echo "No sync state — bootstrapping with a full scrape."
+            uv run scrape fandom
+            uv run scrape fandom-sync --init
+          fi
+
+      - name: Collect outputs
+        id: collect
+        run: |
+          echo "date=$(TZ=Asia/Tokyo date +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          mkdir -p data/fandom
+          find scraper/data -maxdepth 1 -name 'fandom*.json' -exec cp {} data/fandom/ \;
+
+      - name: Create pull request
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: auto/fandom-sync
+          delete-branch: true
+          add-paths: data/fandom/**
+          commit-message: 'chore: Weekly Fandom sync ${{ steps.collect.outputs.date }}'
+          title: 'chore: Weekly Fandom sync ${{ steps.collect.outputs.date }}'
+          body: 'Automated incremental sync from tomica.fandom.com (MediaWiki recentchanges).'
+
+      - name: Notify Discord (failure)
+        if: failure() && env.DISCORD_WEBHOOK_URL != ''
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\": \"Weekly Fandom sync FAILED: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" \
+            "$DISCORD_WEBHOOK_URL"

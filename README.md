@@ -195,12 +195,22 @@ uv run scrape dream         # Dream Tomica 27 models
 uv run scrape unlimited     # Premium Unlimited 12 models
 uv run scrape history       # Historical variants 1028 models (~11s)
 
+# Ongoing updates (also run on a schedule by GitHub Actions)
+uv run scrape monthly-new   # Monthly new-product pages + changelog + snapshot diff
+uv run scrape fandom-sync   # Incremental Fandom sync (needs SUPABASE_SERVICE_ROLE_KEY)
+uv run scrape import-snapshots  # Import committed data/snapshots/ into Supabase
+
+# Chinese-language sources
+uv run scrape funbox        # Taiwan retailer (zh-TW names)
+uv run scrape tomy-cn       # tomy.cn official China site (zh-CN names)
+
 # Import to Supabase — run generated SQL in data/*.sql
 # Or use the classify/enrich commands to add attributes:
 uv run scrape classify              # Rule-based attribute extraction (instant)
 uv run scrape extract-colors        # Pixel-based color extraction from images
 uv run scrape enrich-attributes     # AI-powered attributes via Gemini (needs GEMINI_API_KEY)
 uv run scrape find-images 50        # Search images for items missing them
+uv run scrape analyze-feedback      # Mine recognition_log corrections into AI hints
 ```
 
 ### 4. Local Development

@@ -57,7 +57,7 @@ export function SettingsPage() {
     if (!data) return
     let content: string, mimeType: string, filename: string
     if (format === 'json') { content = JSON.stringify(data, null, 2); mimeType = 'application/json'; filename = 'tomica-collection.json' }
-    else { const headers = 'model_number,car_name,series,condition,has_box,acquired_date\n'; const rows = data.map((r: any) => [r.catalog?.model_number, r.catalog?.car_name, r.catalog?.series, r.condition, r.has_box, r.acquired_date].join(',')); content = headers + rows.join('\n'); mimeType = 'text/csv'; filename = 'tomica-collection.csv' }
+    else { const headers = 'model_number,car_name,series,condition,has_box,acquired_date\n'; const rows = data.map((r) => [r.catalog?.model_number, r.catalog?.car_name, r.catalog?.series, r.condition, r.has_box, r.acquired_date].join(',')); content = headers + rows.join('\n'); mimeType = 'text/csv'; filename = 'tomica-collection.csv' }
     const blob = new Blob([content], { type: mimeType }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url)
   }
 

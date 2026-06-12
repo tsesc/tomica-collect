@@ -41,6 +41,24 @@ def _is_combo_pack(title: str, sku: str) -> bool:
     return "一般色+初回色" in title or sku.endswith("X2")
 
 
+def clean_zh_tw_name(title: str) -> str:
+    """Clean a funbox zh-TW product title down to the bare car name.
+
+    Strips "TOMICA"/"亞版" prefixes, "No.XXX" codes, and 初回/一般色
+    edition markers (including parentheticals). Keeps the car name itself.
+    """
+    name = title.strip()
+    name = re.sub(r"TOMICA", "", name, flags=re.IGNORECASE)
+    name = re.sub(r"亞版", "", name)
+    name = re.sub(r"No\.?\s*\d+", "", name)
+    # Edition parentheticals: (一般色+初回色), （初回色）...
+    name = re.sub(r"[（(][^（）()]*(?:初回|一般色)[^（）()]*[)）]", "", name)
+    name = re.sub(r"初回(?:限定)?色?", "", name)
+    name = re.sub(r"一般色", "", name)
+    name = re.sub(r"\s+", " ", name)
+    return name.strip(" -－　")
+
+
 def _parse_product(product: dict) -> dict | None:
     """Parse a single funbox API product into our format."""
     title = product.get("title", "").strip()
@@ -67,6 +85,7 @@ def _parse_product(product: dict) -> dict | None:
         "model_number": model_number,
         "car_name": car_name,
         "car_name_tw": car_name,
+        "car_name_zh_tw": clean_zh_tw_name(title),
         "series": "regular",
         "is_first_edition": is_first,
         "is_asia_version": is_asia,

@@ -1,5 +1,5 @@
-import { renderHook, act, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 import { useAuth } from '../../src/hooks/useAuth'
 
 vi.mock('../../src/lib/supabase', () => {

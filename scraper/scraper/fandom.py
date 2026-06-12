@@ -1,10 +1,16 @@
 """Scrape Tomica data from tomica.fandom.com via MediaWiki API."""
 
 import asyncio
+import json
 import re
+from datetime import datetime, timezone
+from pathlib import Path
+
 import httpx
 
 API_BASE = "https://tomica.fandom.com/api.php"
+REQUEST_DELAY = 0.3  # polite delay between paginated API calls
+SYNC_STATE_FILE = Path(__file__).parent.parent / "data" / "fandom_sync_state.json"
 
 # (category, series_value, priority)  — higher priority number wins in dedup
 CATEGORIES = [
@@ -328,3 +334,216 @@ def import_to_supabase(items: list[dict], service_role_key: str, supabase_url: s
                 print(f"    {i}/{len(items)} rows processed...")
 
     return {"inserted": inserted, "failed": failed}
+
+
+# ---------------------------------------------------------------------------
+# Incremental sync via MediaWiki RecentChanges
+# ---------------------------------------------------------------------------
+
+# category name → (series, priority), built from the full-scrape CATEGORIES list
+_CATEGORY_SERIES = {category: (series, priority) for category, series, priority in CATEGORIES}
+
+
+class SyncStateMissing(Exception):
+    """Raised when incremental sync is requested but no state file exists."""
+
+
+def load_sync_state(path: Path = SYNC_STATE_FILE) -> str | None:
+    """Return last_sync timestamp from the state file, or None if uninitialized."""
+    path = Path(path)
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except (ValueError, OSError):
+        return None
+    return data.get("last_sync") or None
+
+
+def save_sync_state(last_sync: str, path: Path = SYNC_STATE_FILE) -> None:
+    """Write last_sync timestamp (UTC ISO8601) to the state file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"last_sync": last_sync}, indent=2) + "\n")
+
+
+def _utcnow_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+async def _get_recent_changes(client: httpx.AsyncClient, rcend: str) -> list[str]:
+    """Return unique page titles changed since `rcend` (new + edit, ns=0).
+
+    Paginates with rccontinue. rcend is the *older* boundary (API lists
+    newest-first by default).
+    """
+    titles: list[str] = []
+    seen: set[str] = set()
+    cont = None
+    while True:
+        params = {
+            "action": "query",
+            "list": "recentchanges",
+            "rcprop": "title|ids|timestamp",
+            "rcnamespace": "0",
+            "rctype": "new|edit",
+            "rclimit": "500",
+            "rcend": rcend,
+            "format": "json",
+        }
+        if cont:
+            params["rccontinue"] = cont
+        resp = await client.get(API_BASE, params=params, timeout=30)
+        data = resp.json()
+        for change in data.get("query", {}).get("recentchanges", []):
+            title = change.get("title", "")
+            if title and title not in seen:
+                seen.add(title)
+                titles.append(title)
+        cont = data.get("continue", {}).get("rccontinue")
+        if not cont:
+            break
+        await asyncio.sleep(REQUEST_DELAY)
+    return titles
+
+
+async def _get_page_categories(client: httpx.AsyncClient, titles: list[str]) -> dict[str, list[str]]:
+    """Batch-fetch categories for page titles (20 per API call)."""
+    categories: dict[str, list[str]] = {}
+    safe_titles = [t for t in titles if "|" not in t]
+    batch_size = 20
+    for i in range(0, len(safe_titles), batch_size):
+        batch = safe_titles[i : i + batch_size]
+        params = {
+            "action": "query",
+            "prop": "categories",
+            "cllimit": "500",
+            "titles": "|".join(batch),
+            "format": "json",
+        }
+        resp = await client.get(API_BASE, params=params, timeout=30)
+        data = resp.json()
+        for page in data.get("query", {}).get("pages", {}).values():
+            title = page.get("title", "")
+            cats = [
+                c.get("title", "").removeprefix("Category:")
+                for c in page.get("categories", [])
+            ]
+            categories[title] = cats
+        if i + batch_size < len(safe_titles):
+            await asyncio.sleep(REQUEST_DELAY)
+    return categories
+
+
+def _resolve_series(categories: list[str]) -> str:
+    """Map a page's categories to a series label (highest priority wins)."""
+    best: tuple[str, int] | None = None
+    for cat in categories:
+        entry = _CATEGORY_SERIES.get(cat)
+        if entry and (best is None or entry[1] > best[1]):
+            best = entry
+    # Unknown categories (e.g. a new "2026 Tomica" year category) → catch-all
+    return best[0] if best else "fandom"
+
+
+async def sync_incremental(
+    state_path: Path = SYNC_STATE_FILE,
+    fetch_images: bool = True,
+    client: httpx.AsyncClient | None = None,
+) -> dict:
+    """Fetch pages changed since last sync and rebuild their catalog items.
+
+    Returns {"items": [...], "changed_pages": int, "last_sync": str, "new_sync": str}.
+    Does NOT write the state file — callers save `new_sync` after a successful upsert.
+
+    Raises SyncStateMissing if the state file is absent/uninitialized (first run
+    must use the full `scrape fandom` mode instead of silently scraping everything).
+    """
+    last_sync = load_sync_state(state_path)
+    if not last_sync:
+        raise SyncStateMissing(
+            f"No sync state at {state_path} — run a full 'scrape fandom' first, "
+            "then initialize the state file."
+        )
+
+    new_sync = _utcnow_iso()
+    own_client = client is None
+    if own_client:
+        client = httpx.AsyncClient(
+            headers={"User-Agent": "TomicaCollect-Scraper/1.0 (personal project)"},
+            follow_redirects=True,
+        )
+    try:
+        titles = await _get_recent_changes(client, rcend=last_sync)
+        print(f"  {len(titles)} pages changed since {last_sync}")
+
+        categories: dict[str, list[str]] = {}
+        images: dict[str, str | None] = {}
+        if titles:
+            categories = await _get_page_categories(client, titles)
+            if fetch_images:
+                images = await _get_page_images(client, titles)
+    finally:
+        if own_client:
+            await client.aclose()
+
+    items: list[dict] = []
+    for title in titles:
+        series = _resolve_series(categories.get(title, []))
+        model_number, car_name = _parse_model(title)
+        items.append(
+            {
+                "model_number": model_number,
+                "car_name": car_name,
+                "car_name_en": None,
+                "series": series,
+                "is_first_edition": False,
+                "manufacturer": None,
+                "vehicle_type": None,
+                "body_color": [],
+                "release_date": None,
+                "retired": False,
+                "image_url": images.get(title),
+                "source": "fandom",
+                "metadata": {"wiki_title": title},
+            }
+        )
+
+    return {
+        "items": items,
+        "changed_pages": len(titles),
+        "last_sync": last_sync,
+        "new_sync": new_sync,
+    }
+
+
+def fandom_sync(
+    service_role_key: str,
+    supabase_url: str,
+    state_path: Path = SYNC_STATE_FILE,
+    fetch_images: bool = True,
+) -> dict:
+    """One-call incremental sync: fetch changed pages, upsert, update state.
+
+    State file is only advanced when the Supabase import has no failures,
+    so a failed run is retried from the same last_sync next time.
+    """
+    result = asyncio.run(sync_incremental(state_path, fetch_images=fetch_images))
+    items = result["items"]
+    summary = {
+        "changed_pages": result["changed_pages"],
+        "inserted": 0,
+        "failed": 0,
+        "state_updated": False,
+    }
+
+    if items:
+        import_result = import_to_supabase(items, service_role_key, supabase_url)
+        summary["inserted"] = import_result["inserted"]
+        summary["failed"] = import_result["failed"]
+
+    if summary["failed"] == 0:
+        save_sync_state(result["new_sync"], state_path)
+        summary["state_updated"] = True
+
+    return summary

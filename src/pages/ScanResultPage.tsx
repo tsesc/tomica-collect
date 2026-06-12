@@ -168,7 +168,7 @@ export function ScanResultPage() {
       await addToCollection(effectiveId)
       reset()
       navigate('/catalog')
-    } catch {} finally { setSaving(false) }
+    } catch { /* keep page state on failure */ } finally { setSaving(false) }
   }
 
   // Best name we can extract from AI features

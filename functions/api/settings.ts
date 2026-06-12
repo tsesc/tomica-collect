@@ -22,7 +22,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
     }
 
-    const { ai_provider, api_key } = (await request.json()) as any
+    const { ai_provider, api_key } = (await request.json()) as { ai_provider?: string; api_key?: string }
 
     // Validate ai_provider
     const validProviders = ['openai', 'gemini', 'claude']

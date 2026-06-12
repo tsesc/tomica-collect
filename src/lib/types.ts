@@ -33,6 +33,9 @@ export interface CatalogItem {
   model_number: string
   car_name: string
   car_name_en: string | null
+  car_name_zh_tw?: string | null
+  car_name_zh_hk?: string | null
+  car_name_zh_cn?: string | null
   series: Series
   is_first_edition: boolean
   manufacturer: string | null
@@ -40,6 +43,7 @@ export interface CatalogItem {
   body_color: string[]
   release_date: string | null
   retired: boolean
+  retired_at?: string | null
   image_url: string | null
   source: 'official' | 'community' | 'manual' | 'user'
   variant: number | null

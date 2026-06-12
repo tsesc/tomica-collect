@@ -1,6 +1,10 @@
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { createElement } from 'react'
+import type { ReactNode } from 'react'
+import { renderHook, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useRecognition } from '../../src/hooks/useRecognition'
+import { useRecognition, RecognitionProvider } from '../../src/hooks/useRecognition'
+
+const wrapper = ({ children }: { children: ReactNode }) => createElement(RecognitionProvider, null, children)
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch
@@ -24,7 +28,7 @@ describe('useRecognition', () => {
   beforeEach(() => { mockFetch.mockReset() })
 
   it('starts idle with no result', () => {
-    const { result } = renderHook(() => useRecognition())
+    const { result } = renderHook(() => useRecognition(), { wrapper })
     expect(result.current.status).toBe('idle')
     expect(result.current.result).toBeNull()
   })
@@ -36,7 +40,7 @@ describe('useRecognition', () => {
       raw_features: {},
     }
     mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockResult) })
-    const { result } = renderHook(() => useRecognition())
+    const { result } = renderHook(() => useRecognition(), { wrapper })
     await act(async () => { await result.current.identify('data:image/jpeg;base64,fake') })
     expect(result.current.status).toBe('success')
     expect(result.current.result?.candidates).toHaveLength(1)

@@ -81,7 +81,7 @@ async function callOpenAI(apiKey: string, prompt: string, imageBase64: string): 
     const errBody = await resp.text()
     throw new Error(`OpenAI API ${resp.status}: ${errBody.slice(0, 200)}`)
   }
-  const data = await resp.json() as any
+  const data = await resp.json() as { choices?: { message?: { content?: string } }[] }
   if (!data.choices?.[0]?.message?.content) {
     throw new Error(`OpenAI empty response: ${JSON.stringify(data).slice(0, 200)}`)
   }
@@ -107,7 +107,7 @@ async function callGemini(apiKey: string, prompt: string, imageBase64: string): 
     const errBody = await resp.text()
     throw new Error(`Gemini API ${resp.status}: ${errBody.slice(0, 200)}`)
   }
-  const data = await resp.json() as any
+  const data = await resp.json() as { error?: { message?: string }; candidates?: { content?: { parts?: { text?: string }[] } }[] }
   if (data.error) {
     throw new Error(`Gemini error: ${data.error.message ?? JSON.stringify(data.error)}`)
   }
@@ -134,7 +134,7 @@ async function callClaude(apiKey: string, prompt: string, imageBase64: string): 
     const errBody = await resp.text()
     throw new Error(`Claude API ${resp.status}: ${errBody.slice(0, 200)}`)
   }
-  const data = await resp.json() as any
+  const data = await resp.json() as { content?: { text?: string }[] }
   if (!data.content?.[0]?.text) {
     throw new Error(`Claude empty response: ${JSON.stringify(data).slice(0, 200)}`)
   }

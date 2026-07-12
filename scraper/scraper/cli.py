@@ -16,7 +16,7 @@ from .tlv import scrape_tlv_series
 from .unlimited import scrape_unlimited_series
 from .cars import scrape_cars_series
 from .dedup import dedup_report, enrich_catalog
-from .enrich import enrich_batch
+from .enrich import enrich_batch, enrich_new_releases
 from .classify import classify_batch
 from .color_extract import extract_colors_batch
 from .image_search import batch_search_images
@@ -35,6 +35,8 @@ from .tomy_cn import scrape_tomy_cn
 from .tomicars_club import scrape_tomicars_club
 from .feedback_analyzer import run as analyze_feedback_run
 from . import changelog as changelog_mod
+from .watch import detect_new_releases
+from .importer import import_new_releases
 
 # Whitelist of tomica_catalog columns accepted by `scrape import-snapshots`.
 # Snapshot JSON may carry extra scraper-only keys (is_neo, scale, era, price,
@@ -192,6 +194,9 @@ Catalog scraping (default: regular series):
   tomicars-club       MANUAL-RUN ONLY (data license unconfirmed)
   monthly-new [yymm]  Monthly new-product pages + snapshot changelog
   import-snapshots    Import committed data/snapshots/**/*.json into Supabase
+  watch-new           Detect new releases (5-source diff vs DB) -> new_releases.json
+  enrich-new          AI full-enrich new_releases.json (GEMINI_API_KEY)
+  import-new          Insert enriched new_releases.json into Supabase
 
 Enrichment / maintenance:
   classify            Rule-based attribute extraction (no AI)
@@ -207,6 +212,88 @@ Enrichment / maintenance:
   diff <catalog|history>     Diff data files against backup
   recover <catalog|history>  Merge items from backup
 """
+
+
+def _new_releases_path(data_dir: Path) -> Path:
+    return data_dir / "new_releases.json"
+
+
+def _cmd_watch_new(data_dir: Path) -> int:
+    import os
+    supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+    supabase_key = (
+        os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+        or os.environ.get("SUPABASE_KEY")
+    )
+    if not supabase_key:
+        print("ERROR: SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_KEY) is required.", file=sys.stderr)
+        return 1
+
+    items = asyncio.run(detect_new_releases(supabase_url, supabase_key))
+    if not items:
+        print("No new releases detected.")
+        out = _new_releases_path(data_dir)
+        if out.exists():
+            out.unlink()
+        return 0
+
+    data_dir.mkdir(parents=True, exist_ok=True)
+    out = _new_releases_path(data_dir)
+    out.write_text(json.dumps(items, ensure_ascii=False, indent=2))
+    print(f"Detected {len(items)} new releases → {out}")
+    for it in items[:20]:
+        print(f"  + {it.get('series')}/{it.get('model_number')} {it.get('car_name')}")
+    if len(items) > 20:
+        print(f"    ... and {len(items) - 20} more")
+    return 0
+
+
+def _cmd_enrich_new(data_dir: Path) -> int:
+    import os
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("ERROR: GEMINI_API_KEY is required.", file=sys.stderr)
+        return 1
+
+    path = _new_releases_path(data_dir)
+    if not path.exists():
+        print("No new_releases.json — nothing to enrich.")
+        return 0
+
+    items = json.loads(path.read_text())
+    if not items:
+        print("new_releases.json is empty — nothing to enrich.")
+        return 0
+
+    enriched = asyncio.run(enrich_new_releases(items, api_key))
+    path.write_text(json.dumps(enriched, ensure_ascii=False, indent=2))
+    print(f"Enriched {len(enriched)}/{len(items)} items.")
+    return 0
+
+
+def _cmd_import_new(data_dir: Path) -> int:
+    import os
+    supabase_url = os.environ.get("SUPABASE_URL", "https://qhvtipfmxfdlpolckubb.supabase.co")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    if not supabase_key:
+        print("ERROR: SUPABASE_SERVICE_ROLE_KEY is required.", file=sys.stderr)
+        return 1
+
+    path = _new_releases_path(data_dir)
+    if not path.exists():
+        print("No new_releases.json — nothing to import.")
+        return 0
+
+    items = json.loads(path.read_text())
+    if not items:
+        print("new_releases.json is empty — nothing to import.")
+        return 0
+
+    inserted, failures = import_new_releases(items, supabase_url, supabase_key)
+    print(f"Imported {inserted} items; {len(failures)} failures.")
+    for f in failures[:20]:
+        print(f"  ! {f['series']}/{f['model_number']}: {f['error']}")
+    return 0 if len(failures) <= len(items) // 2 else 1
 
 
 def main():
@@ -227,6 +314,18 @@ def main():
     if len(args) >= 2 and args[0] == "recover":
         _cmd_recover(data_dir, args[1])
         return
+
+    # scrape watch-new — detect new releases by diffing against DB
+    if len(args) >= 1 and args[0] == "watch-new":
+        sys.exit(_cmd_watch_new(data_dir))
+
+    # scrape enrich-new — AI-enrich new releases
+    if len(args) >= 1 and args[0] == "enrich-new":
+        sys.exit(_cmd_enrich_new(data_dir))
+
+    # scrape import-new — push enriched items to Supabase
+    if len(args) >= 1 and args[0] == "import-new":
+        sys.exit(_cmd_import_new(data_dir))
 
     # scrape monthly-new [yymm] — monthly new-product pages + snapshot changelog
     if len(args) >= 1 and args[0] == "monthly-new":

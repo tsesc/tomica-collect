@@ -40,6 +40,9 @@ uv run scrape fandom-sync         # Incremental Fandom sync via RecentChanges (n
 uv run scrape tomy-cn             # tomy.cn official China site (zh-CN names)
 uv run scrape tomicars-club       # tomicars.club archive — MANUAL ONLY, data license unconfirmed, never schedule
 uv run scrape analyze-feedback    # recognition_log → correction_hints (dry-run by default; --apply writes to DB)
+uv run scrape watch-new           # Detect new releases (5-source diff vs DB) → scraper/data/new_releases.json (needs SUPABASE_SERVICE_ROLE_KEY)
+uv run scrape enrich-new          # Full single-call Gemini enrich of new_releases.json — 12 attrs + EN/zh-TW names + descriptions (needs GEMINI_API_KEY)
+uv run scrape import-new          # Insert enriched new_releases.json into Supabase (source='official', ON CONFLICT DO NOTHING)
 uv run scrape import-snapshots    # Import committed data/snapshots/**/*.json into Supabase (needs SUPABASE_SERVICE_ROLE_KEY)
 uv run scrape dedup               # Cross-source dedup report
 uv run identify photo.jpg         # Local image identification (no AI)
@@ -56,6 +59,7 @@ CI/CD: push to `main` → GitHub Actions (ci.yml: build + test, deploy.yml: Clou
 - **monthly-scrape.yml** — cron Sat 18:17 UTC (JST Sun 03:17); only proceeds in the third-Saturday(+1 day, JST) release window (`workflow_dispatch` with `force=true` bypasses). Runs `scrape`, `scrape tlv`, `scrape monthly-new`, then opens PR `auto/monthly-scrape` committing `data/snapshots/{YYYY-MM}/` + rolling `data/snapshots/monthly_new.json`, with the changelog as PR body.
 - **import-snapshots.yml** — on push to `main` touching `data/snapshots/**`: runs `scrape import-snapshots` (dedup-aware insert into tomica_catalog) + `scrape classify`.
 - **weekly-fandom-sync.yml** — cron Mon 19:23 UTC: restores sync state from `data/fandom/fandom_sync_state.json`, runs `scrape fandom-sync` (bootstraps via full `scrape fandom` + `fandom-sync --init` when no state), opens PR `auto/fandom-sync` persisting the advanced state file.
+- **watch-new-releases.yml** — MANUAL ONLY (`workflow_dispatch`; weekly cron intentionally disabled to avoid double-importing with monthly-scrape). Runs `watch-new` → `enrich-new` → `import-new`: detects new releases via a 5-source diff, does one full Gemini Flash call per car (12 visual attributes + EN/zh-TW names + EN/zh-TW descriptions), INSERTs `source='official'` rows, and commits dated snapshots to `scraper/data/snapshots/`. Requires migration 008 + secrets `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`. This is an alternative to monthly-scrape's import path — enable its `schedule:` block only if you retire that path.
 - Required secrets: `SUPABASE_SERVICE_ROLE_KEY` (import/sync DB writes). Optional: `SUPABASE_URL` (defaults to the qhvtipfmxfdlpolckubb project), `DISCORD_WEBHOOK_URL` (notifications, silently skipped if unset).
 - Repo setting: Actions → General → "Allow GitHub Actions to create and approve pull requests" must be enabled. PRs created by `GITHUB_TOKEN` do not trigger ci.yml (known limitation).
 - `scrape tomicars-club` must NEVER be added to these workflows (data license unconfirmed).

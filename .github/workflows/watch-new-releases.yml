@@ -1,0 +1,61 @@
+name: Watch New Releases
+
+# NOTE: The weekly cron is intentionally DISABLED. `monthly-scrape.yml` is the
+# primary auto-import pipeline; running both on a schedule would have two jobs
+# writing source='official' rows (redundant Gemini spend + possible races).
+# This workflow is kept as a MANUAL alternative (full single-call Gemini
+# enrichment: 12 attributes + EN/zh-TW names + descriptions). Re-enable the
+# `schedule:` block below only if you retire monthly-scrape's import path.
+on:
+  # schedule:
+  #   - cron: '0 2 * * 1'      # Monday 02:00 UTC = Mon 10:00 Asia/Taipei
+  workflow_dispatch:            # manual trigger from GitHub UI
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install scraper deps
+        run: cd scraper && uv sync --frozen
+
+      - name: Phase 1 — detect new releases
+        run: cd scraper && uv run scrape watch-new
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Phase 2 — AI enrich
+        if: hashFiles('scraper/data/new_releases.json') != ''
+        run: cd scraper && uv run scrape enrich-new
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Phase 3 — import to Supabase
+        if: hashFiles('scraper/data/new_releases.json') != ''
+        run: cd scraper && uv run scrape import-new
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Snapshot & commit
+        if: hashFiles('scraper/data/new_releases.json') != ''
+        run: |
+          set -euo pipefail
+          mkdir -p scraper/data/snapshots
+          DATE=$(date -u +%Y-%m-%d)
+          mv scraper/data/new_releases.json "scraper/data/snapshots/${DATE}-new-releases.json"
+          git config user.email "tomica-bot@users.noreply.github.com"
+          git config user.name  "Tomica Release Bot"
+          git add scraper/data/snapshots/
+          git commit -m "chore: capture ${DATE} new releases"
+          git push

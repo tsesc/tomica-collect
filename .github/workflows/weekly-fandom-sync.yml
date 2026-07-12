@@ -70,6 +70,17 @@ jobs:
           title: 'chore: Weekly Fandom sync ${{ steps.collect.outputs.date }}'
           body: 'Automated incremental sync from tomica.fandom.com (MediaWiki recentchanges).'
 
+      # Auto-merge: the state-file PR must land or next week's sync re-processes
+      # everything from the stale state (unmerged auto-PRs stalled for weeks in
+      # June 2026). DB writes already happened during the sync step above.
+      - name: Auto-merge PR
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge --squash --delete-branch "${{ steps.cpr.outputs.pull-request-number }}" \
+            --repo "${{ github.repository }}"
+
       - name: Notify Discord (failure)
         if: failure() && env.DISCORD_WEBHOOK_URL != ''
         run: |

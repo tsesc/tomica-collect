@@ -94,11 +94,36 @@ jobs:
           title: 'chore: Monthly scrape ${{ steps.window.outputs.month }}'
           body-path: ${{ runner.temp }}/pr-body.md
 
+      # Auto-merge: unmerged auto-PRs stalled the pipeline for weeks (June 2026),
+      # so the workflow merges its own PR. The PR still exists as a reviewable
+      # record with the changelog as its body.
+      - name: Auto-merge PR
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge --squash --delete-branch "${{ steps.cpr.outputs.pull-request-number }}" \
+            --repo "${{ github.repository }}"
+
+      # GITHUB_TOKEN pushes don't trigger other workflows (known limitation), so
+      # the merge above will NOT fire import-snapshots.yml — run the import
+      # inline instead. The snapshot files are already in this workspace.
+      - name: Import snapshots and classify
+        if: steps.cpr.outputs.pull-request-number != ''
+        working-directory: scraper
+        env:
+          SUPABASE_URL_SECRET: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          export SUPABASE_URL="${SUPABASE_URL_SECRET:-https://qhvtipfmxfdlpolckubb.supabase.co}"
+          uv run scrape import-snapshots
+          uv run scrape classify
+
       - name: Notify Discord (new items)
         if: steps.cpr.outputs.pull-request-url != '' && env.DISCORD_WEBHOOK_URL != ''
         run: |
           curl -fsS -X POST -H 'Content-Type: application/json' \
-            -d "{\"content\": \"Monthly scrape ${{ steps.window.outputs.month }}: new catalog snapshot PR ${{ steps.cpr.outputs.pull-request-url }}\"}" \
+            -d "{\"content\": \"Monthly scrape ${{ steps.window.outputs.month }}: snapshot merged + imported to DB. PR record: ${{ steps.cpr.outputs.pull-request-url }}\"}" \
             "$DISCORD_WEBHOOK_URL"
 
       - name: Notify Discord (failure)

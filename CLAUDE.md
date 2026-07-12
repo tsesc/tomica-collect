@@ -56,9 +56,9 @@ pnpm build && npx wrangler pages deploy dist --project-name tomica-collect --com
 CI/CD: push to `main` → GitHub Actions (ci.yml: build + test, deploy.yml: Cloudflare Pages).
 
 ### Scheduled Automation (GitHub Actions)
-- **monthly-scrape.yml** — cron Sat 18:17 UTC (JST Sun 03:17); only proceeds in the third-Saturday(+1 day, JST) release window (`workflow_dispatch` with `force=true` bypasses). Runs `scrape`, `scrape tlv`, `scrape monthly-new`, then opens PR `auto/monthly-scrape` committing `data/snapshots/{YYYY-MM}/` + rolling `data/snapshots/monthly_new.json`, with the changelog as PR body.
-- **import-snapshots.yml** — on push to `main` touching `data/snapshots/**`: runs `scrape import-snapshots` (dedup-aware insert into tomica_catalog) + `scrape classify`.
-- **weekly-fandom-sync.yml** — cron Mon 19:23 UTC: restores sync state from `data/fandom/fandom_sync_state.json`, runs `scrape fandom-sync` (bootstraps via full `scrape fandom` + `fandom-sync --init` when no state), opens PR `auto/fandom-sync` persisting the advanced state file.
+- **monthly-scrape.yml** — cron Sat 18:17 UTC (JST Sun 03:17); only proceeds in the third-Saturday(+1 day, JST) release window (`workflow_dispatch` with `force=true` bypasses). Runs `scrape`, `scrape tlv`, `scrape monthly-new`, opens PR `auto/monthly-scrape` committing `data/snapshots/{YYYY-MM}/` + rolling `data/snapshots/monthly_new.json` (changelog as PR body), then **auto-merges the PR and runs the import inline** (`import-snapshots` + `classify`) — GITHUB_TOKEN merges don't trigger other workflows, so the import cannot rely on import-snapshots.yml. The PR remains as a reviewable record.
+- **import-snapshots.yml** — on push to `main` touching `data/snapshots/**` (i.e. manual snapshot commits): runs `scrape import-snapshots` (dedup-aware insert into tomica_catalog) + `scrape classify`.
+- **weekly-fandom-sync.yml** — cron Mon 19:23 UTC: restores sync state from `data/fandom/fandom_sync_state.json`, runs `scrape fandom-sync` (bootstraps via full `scrape fandom` + `fandom-sync --init` when no state), opens + **auto-merges** PR `auto/fandom-sync` persisting the advanced state file (DB writes happen during the sync itself).
 - **watch-new-releases.yml** — MANUAL ONLY (`workflow_dispatch`; weekly cron intentionally disabled to avoid double-importing with monthly-scrape). Runs `watch-new` → `enrich-new` → `import-new`: detects new releases via a 5-source diff, does one full Gemini Flash call per car (12 visual attributes + EN/zh-TW names + EN/zh-TW descriptions), INSERTs `source='official'` rows, and commits dated snapshots to `scraper/data/snapshots/`. Requires migration 008 + secrets `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`. This is an alternative to monthly-scrape's import path — enable its `schedule:` block only if you retire that path.
 - Required secrets: `SUPABASE_SERVICE_ROLE_KEY` (import/sync DB writes). Optional: `SUPABASE_URL` (defaults to the qhvtipfmxfdlpolckubb project), `DISCORD_WEBHOOK_URL` (notifications, silently skipped if unset).
 - Repo setting: Actions → General → "Allow GitHub Actions to create and approve pull requests" must be enabled. PRs created by `GITHUB_TOKEN` do not trigger ci.yml (known limitation).
@@ -133,7 +133,7 @@ docker start tomica-postgres  # Port 54320, user: tomica, pass: tomica_local, db
 - `SUPABASE_SERVICE_ROLE_KEY` — for direct DB writes (optional, can use MCP instead)
 
 ## Known Issues / TODO
-- [ ] Migrations 006 (retired_at + current-lineup index) and 007 (car_name_zh_tw/zh_hk/zh_cn + search_tsv rebuild) not yet applied to the live DB — frontend types and scraper output already include the new columns
+- [x] ~~Migrations 006/007 not applied~~ — 006, 007, and 008 (description_en/zh_tw + uniq_catalog_series_model_official) all applied to the live DB (2026-07-12, via Management API)
 - [ ] tomicars.club data license unconfirmed — `scrape tomicars-club` is manual-run only; contact the site owner before importing
 - [ ] API keys stored as plaintext JSONB — `pgcrypto` enabled but unused
 - [ ] No rate limiting on most Cloudflare Functions (submit-catalog has 10/day)

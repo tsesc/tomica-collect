@@ -55,6 +55,8 @@ export interface CatalogItem {
   verified?: boolean
   submission_status?: 'official' | 'user' | 'disputed' | 'rejected'
   submission_notes?: string | null
+  description_en?: string | null
+  description_zh_tw?: string | null
   image_hash?: string | null
 }
 

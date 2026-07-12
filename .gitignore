@@ -5,7 +5,8 @@ dist/
 .env.local
 .DS_Store
 *.tsbuildinfo
-scraper/data/
+scraper/data/*
+!scraper/data/snapshots/
 scraper/.venv/
 __pycache__/
 .wrangler/

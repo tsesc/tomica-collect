@@ -36,6 +36,33 @@ to extract vehicle attributes as a JSON object with exactly these fields:
 Return ONLY the JSON object, no explanation.\
 """
 
+FULL_ENRICH_PROMPT = """\
+You are a Tomica die-cast car expert. Analyze this product image AND the Japanese \
+car name to extract a JSON object with EXACTLY these 14 fields:
+
+Visual attributes:
+- vehicle_category: one of [car, truck, bus, emergency, construction, motorcycle, aircraft, boat, train, fantasy]
+- body_style: one of [sedan, suv, coupe, wagon, van, pickup, convertible, hatchback, cab_over, special]
+- primary_color: dominant body color. Real color names only: "red", "blue", "white", "black", "silver", "yellow", "green", "orange", "gold", "gray", "brown", "pink", "purple", "beige", "navy", "cream", "chrome", "copper", "maroon". NEVER "unknown".
+- secondary_color: second most visible color, or null if single-color
+- wheel_count: one of [0, 2, 4, 6, 8]
+- size_class: one of [small, medium, large, extra_large]
+- features: array from [police_light, ladder, wing, blade, crane, antenna, decal, open_top, tank, trailer, bucket, hose, plow, box_body, flatbed, drill]
+- era_style: one of [classic, modern, futuristic, retro]
+- has_livery: boolean (branded livery/graphics present?)
+- window_style: one of [standard, none, panoramic, cab]
+
+Translations:
+- car_name_en: full English translation of the car_name, including manufacturer in English. Example: "日産 スカイライン GT-R(BNR34) パトロールカー" → "Nissan Skyline GT-R (BNR34) Patrol Car"
+- car_name_zh_tw: full Traditional Chinese translation. Example: "日產 Skyline GT-R (BNR34) 巡邏車". Keep Latin model codes (GT-R, AE86) untranslated.
+
+Description:
+- description_en: 3-5 sentences of plain English describing the real-world vehicle (history, notable trait, generation/year if obvious from the model). Avoid marketing fluff.
+- description_zh_tw: same description, in Traditional Chinese (NOT Simplified). 3-5 sentences.
+
+Return ONLY the JSON object, no explanation.\
+"""
+
 # Validation sets for enum fields
 VALID_VEHICLE_CATEGORY = {
     "car", "truck", "bus", "emergency", "construction",
@@ -149,6 +176,26 @@ def validate_attributes(data: dict) -> dict | None:
     except Exception:
         logger.exception("Unexpected error validating attributes")
         return None
+
+
+def validate_full_enrichment(data: dict) -> dict | None:
+    """Validate the 12 visual fields PLUS the 4 translation/description fields.
+
+    Returns the normalized dict (visual + translation), or None if any required
+    string field is missing or blank.
+    """
+    visual = validate_attributes(data)
+    if visual is None:
+        return None
+
+    for key in ("car_name_en", "car_name_zh_tw", "description_en", "description_zh_tw"):
+        value = data.get(key)
+        if not isinstance(value, str) or not value.strip():
+            logger.warning("Missing or empty %s in full enrichment", key)
+            return None
+        visual[key] = value.strip()
+
+    return visual
 
 
 async def analyze_image(
@@ -268,3 +315,119 @@ async def enrich_batch(
         await asyncio.gather(*tasks)
 
     return results
+
+
+async def analyze_full(
+    client: httpx.AsyncClient,
+    api_key: str,
+    image_url: str,
+    car_name: str,
+) -> dict | None:
+    """Fetch image, send to Gemini with FULL_ENRICH_PROMPT, validate. Returns dict or None."""
+    try:
+        img_resp = await client.get(image_url, timeout=30.0)
+        img_resp.raise_for_status()
+    except httpx.HTTPError as e:
+        logger.warning("Failed to fetch image %s: %s", image_url, e)
+        return None
+
+    content_type = img_resp.headers.get("content-type", "image/jpeg")
+    if "png" in content_type:
+        mime = "image/png"
+    elif "webp" in content_type:
+        mime = "image/webp"
+    elif "gif" in content_type:
+        mime = "image/gif"
+    else:
+        mime = "image/jpeg"
+
+    img_b64 = base64.b64encode(img_resp.content).decode()
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": FULL_ENRICH_PROMPT + f"\n\nCar name (Japanese): {car_name}"},
+                    {"inline_data": {"mime_type": mime, "data": img_b64}},
+                ]
+            }
+        ],
+        "generationConfig": {"responseMimeType": "application/json"},
+    }
+    url = GEMINI_API_URL.format(api_key=api_key)
+
+    try:
+        resp = await client.post(url, json=payload, timeout=90.0)
+        resp.raise_for_status()
+    except httpx.HTTPError as e:
+        logger.warning("Gemini API error for %s: %s", car_name, e)
+        return None
+
+    try:
+        body = resp.json()
+        text = body["candidates"][0]["content"]["parts"][0]["text"]
+        data = json.loads(text)
+    except (KeyError, IndexError, json.JSONDecodeError) as e:
+        logger.warning("Failed to parse Gemini response for %s: %s", car_name, e)
+        return None
+
+    return validate_full_enrichment(data)
+
+
+async def enrich_new_releases(
+    items: list[dict],
+    api_key: str,
+    concurrency: int = 5,
+) -> list[dict]:
+    """Enrich a list of new-release items with full Gemini output.
+
+    Returns the input list filtered to only items that successfully enriched.
+    Each surviving item is decorated with:
+      - attributes: dict with the 12 visual fields
+      - car_name_en, car_name_zh_tw, description_en, description_zh_tw: str
+
+    Items without image_url are skipped (logged). Items that fail Gemini twice
+    are dropped.
+    """
+    sem = asyncio.Semaphore(concurrency)
+    out: list[dict] = []
+
+    async def _process(client: httpx.AsyncClient, item: dict) -> None:
+        label = f"{item.get('series')}/{item.get('model_number', '?')} {item.get('car_name', '?')}"
+        image_url = item.get("image_url")
+        if not image_url:
+            logger.warning("SKIP (no image_url): %s", label)
+            return
+
+        async with sem:
+            result = await analyze_full(client, api_key, image_url, item.get("car_name", ""))
+            if result is None:
+                logger.info("Retrying %s ...", label)
+                await asyncio.sleep(5)
+                result = await analyze_full(client, api_key, image_url, item.get("car_name", ""))
+
+            if result is None:
+                logger.warning("FAIL  %s", label)
+                return
+
+            visual_keys = {
+                "vehicle_category", "body_style", "primary_color", "secondary_color",
+                "wheel_count", "size_class", "features", "era_style",
+                "has_livery", "window_style",
+            }
+            attributes = {k: v for k, v in result.items() if k in visual_keys}
+            enriched = dict(item)
+            enriched["attributes"] = attributes
+            enriched["car_name_en"]       = result["car_name_en"]
+            enriched["car_name_zh_tw"]    = result["car_name_zh_tw"]
+            enriched["description_en"]    = result["description_en"]
+            enriched["description_zh_tw"] = result["description_zh_tw"]
+            out.append(enriched)
+            logger.info("OK    %s", label)
+
+            await asyncio.sleep(4)  # ~15 RPM Gemini free tier ceiling
+
+    async with httpx.AsyncClient() as client:
+        await asyncio.gather(*[_process(client, item) for item in items])
+
+    return out

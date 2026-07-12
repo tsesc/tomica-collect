@@ -68,6 +68,7 @@ def parse_page(soup: BeautifulSoup) -> list[dict]:
         manufacturer = _guess_manufacturer(car_name)
 
         items.append({
+            "series": "regular",
             "model_number": model_number,
             "car_name": car_name,
             "image_url": image_url,

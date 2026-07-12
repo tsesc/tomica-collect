@@ -194,6 +194,9 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
             </h2>
             {/* Japanese original */}
             <p className="text-sm text-on-surface-variant mt-0.5">{item.car_name}</p>
+            {item.car_name_zh_tw && (
+              <p className="text-sm text-on-surface-variant">{item.car_name_zh_tw}</p>
+            )}
           </div>
 
           {/* Details grid */}
@@ -238,6 +241,17 @@ export function CarDetailModal({ item, isCollected, onClose, onToggleCollection,
             )}
             {item.attributes && <AttributeGrid attrs={item.attributes} />}
           </div>
+
+          {(item.description_zh_tw || item.description_en) && (
+            <section className="mt-6 space-y-2">
+              <h3 className="text-sm font-semibold text-on-surface-variant uppercase tracking-wide">
+                介紹
+              </h3>
+              <p className="text-sm leading-relaxed text-on-surface whitespace-pre-line">
+                {item.description_zh_tw || item.description_en}
+              </p>
+            </section>
+          )}
 
         </div>
       </div>

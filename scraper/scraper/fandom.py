@@ -301,9 +301,12 @@ def import_to_supabase(items: list[dict], service_role_key: str, supabase_url: s
         "apikey": service_role_key,
         "Authorization": f"Bearer {service_role_key}",
         "Content-Type": "application/json",
-        "Prefer": "return=minimal,resolution=ignore-duplicates",
+        # return=representation so we can count what ACTUALLY landed —
+        # ignore-duplicates silently skips rows that hit any unique index
+        # (idx_catalog_unique), and return=minimal hid that as a fake success.
+        "Prefer": "return=representation,resolution=ignore-duplicates",
     }
-    base_url = f"{supabase_url}/rest/v1/tomica_catalog"
+    base_url = f"{supabase_url}/rest/v1/tomica_catalog?select=id"
 
     inserted = 0
     failed = 0
@@ -322,10 +325,10 @@ def import_to_supabase(items: list[dict], service_role_key: str, supabase_url: s
 
             resp = client.post(base_url, headers=headers, json=payload)
             if resp.status_code in (200, 201):
-                inserted += len(batch)
-            elif resp.status_code == 409:
-                # Partial conflict — still ok for ignored dupes
-                inserted += len(batch)
+                landed = len(resp.json())
+                inserted += landed
+                if landed < len(batch):
+                    print(f"  Batch {i}–{i+len(batch)}: {len(batch) - landed} duplicates ignored")
             else:
                 print(f"  Batch {i}–{i+len(batch)} failed: {resp.status_code} {resp.text[:200]}")
                 failed += len(batch)

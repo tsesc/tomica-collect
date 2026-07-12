@@ -469,15 +469,21 @@ def main():
             print("No snapshot items found.")
             return
 
-        # Dedup against existing DB rows (tomica_catalog has no unique
-        # constraint, so a naive POST would duplicate the whole catalog).
+        # Dedup against existing DB rows. NOTE: tomica_catalog DOES have a
+        # unique index — idx_catalog_unique on (model_number,
+        # COALESCE(variant, 0), series, is_first_edition). Tomica reuses
+        # regular-series numbers across generations (a new No.19 replaces the
+        # old No.19), so a number-reuse row must take the next free variant or
+        # the insert's ignore-duplicates silently drops it (the June 2026
+        # snapshot lost all 364 rows this way while reporting success).
         headers = {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
         base = f"{supabase_url}/rest/v1"
         existing: set[tuple] = set()
+        variant_taken: dict[tuple, set[int]] = {}
         offset = 0
         while True:
             resp = httpx_sync.get(
-                f"{base}/tomica_catalog?select=series,model_number,car_name&offset={offset}&limit=1000",
+                f"{base}/tomica_catalog?select=series,model_number,car_name,variant,is_first_edition&offset={offset}&limit=1000",
                 headers=headers, timeout=30,
             )
             resp.raise_for_status()
@@ -486,6 +492,11 @@ def main():
                 break
             for r in batch:
                 existing.add((r.get("series"), r.get("model_number") or "", r.get("car_name")))
+                ife = r.get("is_first_edition")
+                if ife is not None:  # SQL NULL never conflicts under the unique index
+                    variant_taken.setdefault(
+                        (r.get("series"), r.get("model_number") or "", ife), set()
+                    ).add(r.get("variant") or 0)
             offset += len(batch)
             if len(batch) < 1000:
                 break
@@ -493,12 +504,23 @@ def main():
 
         seen = set(existing)
         new_rows: list[dict] = []
+        bumped = 0
         for row in candidates:
             key = (row.get("series"), row.get("model_number") or "", row.get("car_name"))
             if key in seen:
                 continue
             seen.add(key)
+            ife = row.get("is_first_edition")
+            if ife is not None:
+                vkey = (row.get("series"), row.get("model_number") or "", ife)
+                taken = variant_taken.setdefault(vkey, set())
+                if (row.get("variant") or 0) in taken:
+                    row["variant"] = max(taken) + 1
+                    bumped += 1
+                taken.add(row.get("variant") or 0)
             new_rows.append(row)
+        if bumped:
+            print(f"{bumped} number-reuse rows assigned the next free variant")
 
         print(f"{len(candidates)} snapshot items → {len(new_rows)} new rows to insert")
         if not new_rows:

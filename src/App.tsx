@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { HomePage } from './pages/HomePage'
 import { ScanResultPage } from './pages/ScanResultPage'
 import { CatalogPage } from './pages/CatalogPage'
+import { CollectionPage } from './pages/CollectionPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AuthPage } from './pages/AuthPage'
 import { useAuth } from './hooks/useAuth'
@@ -28,7 +29,7 @@ export default function App() {
             {/* Protected routes — login required */}
             <Route index element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="scan-result" element={<ProtectedRoute><ScanResultPage /></ProtectedRoute>} />
-            <Route path="collection" element={<Navigate to="/catalog" replace />} />
+            <Route path="collection" element={<ProtectedRoute><CollectionPage /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           </Route>
         </Routes>

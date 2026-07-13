@@ -89,6 +89,7 @@ Python Scraper (uv + httpx + Pillow)
 - `/catalog` — public (no auth required)
 - `/`, `/scan-result`, `/collection`, `/settings` — `<ProtectedRoute>` (requires Supabase auth)
 - `/auth` — login/signup
+- `/collection` — showcase page ("收納盒"): framer-motion drag-to-reorder grid with S/M/L tile sizes and 4 case materials (classic/wood/acrylic/velvet). Arrangement persists in `user_settings.collection_layout` JSONB (migration 010) + localStorage cache. Components under `src/components/showcase/`, layout state in `useCollectionLayout`.
 
 Pages never call Supabase directly — all data access goes through hooks in `src/hooks/`.
 

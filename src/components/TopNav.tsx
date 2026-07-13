@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 const links = [
   { to: '/', label: '掃描', icon: 'photo_camera' },
   { to: '/catalog', label: '圖鑑', icon: 'auto_stories' },
-  { to: '/collection', label: '收藏', icon: 'emoji_events' },
+  { to: '/collection', label: '收藏', icon: 'shelves' },
   { to: '/settings', label: '設定', icon: 'settings' },
 ]
 

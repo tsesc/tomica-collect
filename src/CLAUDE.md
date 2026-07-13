@@ -10,6 +10,7 @@ React 19 SPA with Vite, Tailwind CSS v4, React Router 7.
 - `/catalog` — public, no auth required
 - `/`, `/scan-result`, `/collection`, `/settings` — wrapped in `<ProtectedRoute>`
 - `/auth` — login/signup page
+- `/collection` is the showcase page ("收納盒") — drag-to-reorder + resizable tiles + case materials; see `components/showcase/` and `hooks/useCollectionLayout.ts`
 
 ### Design System ("Diecast Heritage")
 Tokens in `index.css` via `@theme`:

@@ -20,8 +20,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "cars:カーズ トミカ C-14 メーター (20周年記念タイプ)": {
     "confirmed_retired": true,
@@ -44,8 +44,80 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
+  },
+  "cars:カーズ トミカ SP クルーズ・ラミレス（20周年記念タイプ）": {
+    "confirmed_retired": false,
+    "first_missed": "2026-09-19",
+    "item": {
+      "body_color": [],
+      "car_name": "カーズ トミカ SP クルーズ・ラミレス（20周年記念タイプ）",
+      "car_name_en": null,
+      "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2608/pic_cars_sp_ramirez_01.webp",
+      "is_first_edition": false,
+      "manufacturer": null,
+      "metadata": {
+        "price_jpy": 935,
+        "yymm": "2608"
+      },
+      "model_number": "",
+      "release_date": "2026-08-01",
+      "retired": false,
+      "series": "cars",
+      "source": "official",
+      "vehicle_type": null
+    },
+    "last_checked": "2026-09-19",
+    "miss_count": 1
+  },
+  "cars:カーズ トミカ SP ジャクソン・ストーム（20周年記念タイプ）": {
+    "confirmed_retired": false,
+    "first_missed": "2026-09-19",
+    "item": {
+      "body_color": [],
+      "car_name": "カーズ トミカ SP ジャクソン・ストーム（20周年記念タイプ）",
+      "car_name_en": null,
+      "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2608/pic_cars_sp_jacksonstorm_01.webp",
+      "is_first_edition": false,
+      "manufacturer": null,
+      "metadata": {
+        "price_jpy": 935,
+        "yymm": "2608"
+      },
+      "model_number": "",
+      "release_date": "2026-08-01",
+      "retired": false,
+      "series": "cars",
+      "source": "official",
+      "vehicle_type": null
+    },
+    "last_checked": "2026-09-19",
+    "miss_count": 1
+  },
+  "cars:カーズ トミカ でるでるバケツ ライトニング・マックィーンver.": {
+    "confirmed_retired": false,
+    "first_missed": "2026-09-19",
+    "item": {
+      "body_color": [],
+      "car_name": "カーズ トミカ でるでるバケツ ライトニング・マックィーンver.",
+      "car_name_en": null,
+      "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2608/pic_cars_sp_deruderu_bucket_01.webp",
+      "is_first_edition": false,
+      "manufacturer": null,
+      "metadata": {
+        "price_jpy": 4620,
+        "yymm": "2608"
+      },
+      "model_number": "",
+      "release_date": "2026-08-01",
+      "retired": false,
+      "series": "cars",
+      "source": "official",
+      "vehicle_type": null
+    },
+    "last_checked": "2026-09-19",
+    "miss_count": 1
   },
   "disney:ドリームトミカ No.180 ディズニートミカパレード トイ・ストーリー５": {
     "confirmed_retired": true,
@@ -68,8 +140,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ SP ディズニーモータース キュビット エイリアン": {
     "confirmed_retired": true,
@@ -92,8 +164,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ SP ディズニーモータース ジョリーフロート トイ・ストーリー５": {
     "confirmed_retired": true,
@@ -116,8 +188,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ SP ディズニーモータース チムチム フォーキー": {
     "confirmed_retired": true,
@@ -140,8 +212,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ SP ディズニーモータース ドリームジャーニー ウッディ": {
     "confirmed_retired": true,
@@ -164,8 +236,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ SP ディズニーモータース ドリームスターII バズ・ライトイヤー": {
     "confirmed_retired": true,
@@ -188,8 +260,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ SP ディズニーモータース ハイハットクラシック ウッディ": {
     "confirmed_retired": true,
@@ -212,8 +284,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ SP ディズニーモータース ポピンズ ボー・ピープ": {
     "confirmed_retired": true,
@@ -236,8 +308,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ディズニーモータース トイズキャリー トイ・ストーリー５": {
     "confirmed_retired": true,
@@ -260,8 +332,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ディズニーモータース パルズトランポ トイ・ストーリー５ ウッディ": {
     "confirmed_retired": true,
@@ -284,8 +356,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ディズニーモータース パルズトランポ トイ・ストーリー５ ジェシー": {
     "confirmed_retired": true,
@@ -308,8 +380,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ディズニーモータース パルズトランポ トイ・ストーリー５ バズ・ライトイヤー": {
     "confirmed_retired": true,
@@ -332,8 +404,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー SP エイリアン＆スペースクレーン": {
     "confirmed_retired": true,
@@ -356,8 +428,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー SP ジェシー＆アンディのおもちゃ箱": {
     "confirmed_retired": true,
@@ -380,8 +452,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー SP スリンキー・ドッグ＆ダンボールトイボックス": {
     "confirmed_retired": true,
@@ -404,8 +476,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー SP ハム＆アンディのイス": {
     "confirmed_retired": true,
@@ -428,8 +500,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー SP ボー・ピープ＆スカンクカー": {
     "confirmed_retired": true,
@@ -452,8 +524,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー SP レックス＆スケートボード": {
     "confirmed_retired": true,
@@ -476,8 +548,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー５ SP ウッディ＆ブルズアイ": {
     "confirmed_retired": true,
@@ -500,8 +572,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー５ SP ジェシー＆ブルズアイ": {
     "confirmed_retired": true,
@@ -524,8 +596,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー５ SP ハイテク版 バズ・ライトイヤー＆宇宙船": {
     "confirmed_retired": true,
@@ -548,11 +620,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "disney:ドリームトミカ ライドオン トイ・ストーリー５ バズ・ライトイヤー 宇宙船ケース ハイテク版": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -572,8 +644,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "dream:DREAM TOMICA CONVERSE ALL STAR COLLECTION VOL.1": {
     "confirmed_retired": true,
@@ -596,11 +668,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "dream:ドリームトミカ SP まいぜんシスターズ ぜんいち＆マイッキー": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -621,11 +693,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "dream:ドリームトミカ SP トミカとトム トミカだいすき": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -646,11 +718,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "dream:ドリームトミカ SP トミカとトム トミカであそぼう": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -671,11 +743,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "dream:ドリームトミカ SP トミカとトム トムときょうりゅう": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -696,8 +768,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "giftset:トミカタウンをパトロール！ トミカ警察車両セット": {
     "confirmed_retired": true,
@@ -720,11 +792,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "premium:05 ランボルギーニ ミウラ P400S": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -745,8 +817,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "premium:23 トヨタ セリカ GT-FOUR RC": {
     "confirmed_retired": true,
@@ -770,11 +842,36 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
+  },
+  "premium:24 トヨタ マークX 覆面パトロールカー": {
+    "confirmed_retired": false,
+    "first_missed": "2026-09-19",
+    "item": {
+      "body_color": [],
+      "car_name": "24 トヨタ マークX 覆面パトロールカー",
+      "car_name_en": null,
+      "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2608/pic_tp_24_markx_fukumen_01.webp",
+      "is_first_edition": false,
+      "manufacturer": "Toyota",
+      "metadata": {
+        "features": "左右ドア開閉、警光灯可動",
+        "price_jpy": 990,
+        "yymm": "2608"
+      },
+      "model_number": "",
+      "release_date": "2026-08-01",
+      "retired": false,
+      "series": "premium",
+      "source": "official",
+      "vehicle_type": null
+    },
+    "last_checked": "2026-09-19",
+    "miss_count": 1
   },
   "premium:Lamborghini 3 MODELS Collection": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -794,8 +891,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "premium:tomicaトランスポーター 日産 NISSAN GT-R NISMO Special edition": {
     "confirmed_retired": true,
@@ -818,8 +915,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "premium:トミカプレミアムＲａｃｉｎｇ GR GT3": {
     "confirmed_retired": true,
@@ -843,11 +940,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "premium:トミカプレミアムＲａｃｉｎｇ マツダ 787B": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -868,11 +965,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "premium:トミカプレミアムＲａｃｉｎｇ マツダ 787B 18号車": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -893,8 +990,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "premium:トミカプレミアムｕｎｌｉｍｉｔｅｄ 13 トイ・ストーリー ピザ・プラネットトラック": {
     "confirmed_retired": true,
@@ -918,8 +1015,33 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
+  },
+  "premium:トミカプレミアムｕｎｌｉｍｉｔｅｄ 14 昴と彗星 SUBARU BRZ（佐藤 昴）": {
+    "confirmed_retired": false,
+    "first_missed": "2026-09-19",
+    "item": {
+      "body_color": [],
+      "car_name": "トミカプレミアムｕｎｌｉｍｉｔｅｄ 14 昴と彗星 SUBARU BRZ（佐藤 昴）",
+      "car_name_en": null,
+      "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2608/pic_tpu_14_subaru_brz_01.webp",
+      "is_first_edition": false,
+      "manufacturer": null,
+      "metadata": {
+        "features": "サスペンション、左右ドア開閉",
+        "price_jpy": 1320,
+        "yymm": "2608"
+      },
+      "model_number": "",
+      "release_date": "2026-08-01",
+      "retired": false,
+      "series": "premium",
+      "source": "official",
+      "vehicle_type": null
+    },
+    "last_checked": "2026-09-19",
+    "miss_count": 1
   },
   "premium:トミカプレミアムｕｎｌｉｍｉｔｅｄ 爆走兄弟レッツ＆ゴー!! ミニ四駆 ブロッケンギガント": {
     "confirmed_retired": true,
@@ -943,8 +1065,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "premium:トミカプレミアムｕｎｌｉｍｉｔｅｄ 爆走兄弟レッツ＆ゴー!! ミニ四駆 レイスティンガー": {
     "confirmed_retired": true,
@@ -968,8 +1090,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "regular:No.132": {
     "confirmed_retired": true,
@@ -993,8 +1115,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "regular:No.19": {
     "confirmed_retired": true,
@@ -1018,11 +1140,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "regular:No.24": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -1043,11 +1165,11 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "regular:No.52": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -1068,8 +1190,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "regular:No.57": {
     "confirmed_retired": true,
@@ -1093,11 +1215,61 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
+  },
+  "regular:No.6": {
+    "confirmed_retired": false,
+    "first_missed": "2026-09-19",
+    "item": {
+      "body_color": [],
+      "car_name": "マツダ CX-5",
+      "car_name_en": null,
+      "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2608/pic_006_01.webp",
+      "is_first_edition": false,
+      "manufacturer": "Mazda",
+      "metadata": {
+        "features": "サスペンション",
+        "price_jpy": 594,
+        "yymm": "2608"
+      },
+      "model_number": "No.6",
+      "release_date": "2026-08-01",
+      "retired": false,
+      "series": "regular",
+      "source": "official",
+      "vehicle_type": null
+    },
+    "last_checked": "2026-09-19",
+    "miss_count": 1
+  },
+  "regular:No.76": {
+    "confirmed_retired": false,
+    "first_missed": "2026-09-19",
+    "item": {
+      "body_color": [],
+      "car_name": "日産 エクストレイル パトロールカー",
+      "car_name_en": null,
+      "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2608/pic_076_01.webp",
+      "is_first_edition": false,
+      "manufacturer": "Nissan",
+      "metadata": {
+        "features": "サスペンション",
+        "price_jpy": 594,
+        "yymm": "2608"
+      },
+      "model_number": "No.76",
+      "release_date": "2026-08-01",
+      "retired": false,
+      "series": "regular",
+      "source": "official",
+      "vehicle_type": null
+    },
+    "last_checked": "2026-09-19",
+    "miss_count": 1
   },
   "town:スクランブルポリスステーション": {
-    "confirmed_retired": false,
+    "confirmed_retired": true,
     "first_missed": "2026-08-15",
     "item": {
       "body_color": [],
@@ -1117,8 +1289,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 1
+    "last_checked": "2026-09-19",
+    "miss_count": 2
   },
   "town:トミカタウン ヤマト運輸営業所（トミカ、配達員、小物付き）": {
     "confirmed_retired": true,
@@ -1141,8 +1313,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "town:トミカビークルタウン 変形ショベルカー（トミカ付き）": {
     "confirmed_retired": true,
@@ -1165,8 +1337,8 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   },
   "town:トミカビークルタウン 変形パトロールカー（トミカ付き）": {
     "confirmed_retired": true,
@@ -1189,7 +1361,7 @@
       "source": "official",
       "vehicle_type": null
     },
-    "last_checked": "2026-08-15",
-    "miss_count": 2
+    "last_checked": "2026-09-19",
+    "miss_count": 3
   }
 }

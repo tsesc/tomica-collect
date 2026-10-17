@@ -1,42 +1,6 @@
 [
   {
     "body_color": [],
-    "car_name": "カーズ トミカ アドベントカレンダー２０２６",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_cars_adventcalender_01.webp",
-    "is_first_edition": false,
-    "manufacturer": null,
-    "metadata": {
-      "price_jpy": 5280,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
-    "retired": false,
-    "series": "cars",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
-    "car_name": "カーズ トミカ ライトニング・マックィーン ピストン・カップ付き （ライトニング・マックィーンデイ 2026特別仕様）",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_cars_lightningmcqueen_cup_01.webp",
-    "is_first_edition": false,
-    "manufacturer": null,
-    "metadata": {
-      "price_jpy": 2200,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
-    "retired": false,
-    "series": "cars",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
     "car_name": "カーズ トミカ 洗車場",
     "car_name_en": null,
     "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2611/pic_cars_carwash_01.webp",
@@ -91,92 +55,19 @@
   },
   {
     "body_color": [],
-    "car_name": "ドリームトミカ くまのプーさん＆フレンズセット",
+    "car_name": "寿司トミカ さんりおきゃらくたぁず",
     "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_disney_pooh_friends_01.webp",
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_dream_sushi_sanrio_01.webp",
     "is_first_edition": false,
     "manufacturer": null,
     "metadata": {
-      "price_jpy": 4950,
-      "yymm": "2609"
+      "price_jpy": 1100,
+      "yymm": "2612"
     },
     "model_number": "",
-    "release_date": "2026-09-01",
-    "retired": false,
-    "series": "disney",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
-    "car_name": "ドリームトミカ ディズニーモータース グランドドリームキャリー くまのプーさん",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_disneymotores_gdc_pooh_01.webp",
-    "is_first_edition": false,
-    "manufacturer": null,
-    "metadata": {
-      "price_jpy": 4950,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
-    "retired": false,
-    "series": "disney",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
-    "car_name": "ドリームトミカ NO.164 マリオカート ワールド マリオ",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_dream_164_mcw_mario_01.webp",
-    "is_first_edition": false,
-    "manufacturer": null,
-    "metadata": {
-      "price_jpy": 990,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
+    "release_date": "2026-12-01",
     "retired": false,
     "series": "dream",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
-    "car_name": "ドリームトミカ SP マリオカート ワールド ヨッシー",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_dream_sp_mcw_yoshi_01.webp",
-    "is_first_edition": false,
-    "manufacturer": null,
-    "metadata": {
-      "price_jpy": 990,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
-    "retired": false,
-    "series": "dream",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
-    "car_name": "13 トヨタ カローラ レビン（AE92）",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_tp_13_toyota_corolla_levin_01.webp",
-    "is_first_edition": false,
-    "manufacturer": "Toyota",
-    "metadata": {
-      "features": "左右ドア開閉",
-      "price_jpy": 990,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
-    "retired": false,
-    "series": "premium",
     "source": "official",
     "vehicle_type": null
   },
@@ -189,7 +80,6 @@
     "manufacturer": "Toyota",
     "metadata": {
       "features": "左右ドア開閉/後部ドア開閉",
-      "price_jpy": 990,
       "yymm": "2610"
     },
     "model_number": "",
@@ -220,9 +110,47 @@
   },
   {
     "body_color": [],
+    "car_name": "35 マツダ RX-8",
+    "car_name_en": null,
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_tp_35_mazda_rx8_01.webp",
+    "is_first_edition": false,
+    "manufacturer": "Mazda",
+    "metadata": {
+      "features": "左右ドア開閉",
+      "price_jpy": 990,
+      "yymm": "2612"
+    },
+    "model_number": "",
+    "release_date": "2026-12-01",
+    "retired": false,
+    "series": "premium",
+    "source": "official",
+    "vehicle_type": null
+  },
+  {
+    "body_color": [],
     "car_name": "トミカプレミアムＲａｃｉｎｇ #23 MOTUL AUTECH GT-R",
     "car_name_en": null,
     "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2611/pic_tpracing_23_motul_01.webp",
+    "is_first_edition": false,
+    "manufacturer": null,
+    "metadata": {
+      "features": "左右ドア開閉",
+      "price_jpy": 1980,
+      "yymm": "2611"
+    },
+    "model_number": "",
+    "release_date": "2026-11-01",
+    "retired": false,
+    "series": "premium",
+    "source": "official",
+    "vehicle_type": null
+  },
+  {
+    "body_color": [],
+    "car_name": "トミカプレミアムＲａｃｉｎｇ カストロール トムス スープラ 36号車",
+    "car_name_en": null,
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2611/pic_tpracing_castrol_toms_supra36_01.webp",
     "is_first_edition": false,
     "manufacturer": null,
     "metadata": {
@@ -258,17 +186,17 @@
   },
   {
     "body_color": [],
-    "car_name": "トミカプレミアムｕｎｌｉｍｉｔｅｄ 爆走兄弟レッツ＆ゴー!! ミニ四駆 スピンコブラ",
+    "car_name": "トミカプレミアムｕｎｌｉｍｉｔｅｄ 爆走兄弟レッツ＆ゴー!! ミニ四駆 バスターソニック",
     "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_tpu_letsgo_mini4_spincobra_01.webp",
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_tpu_letsgo_bustersonic_01.webp",
     "is_first_edition": false,
     "manufacturer": null,
     "metadata": {
       "price_jpy": 1430,
-      "yymm": "2609"
+      "yymm": "2612"
     },
     "model_number": "",
-    "release_date": null,
+    "release_date": "2026-12-01",
     "retired": false,
     "series": "premium",
     "source": "official",
@@ -276,74 +204,17 @@
   },
   {
     "body_color": [],
-    "car_name": "トミカプレミアムｕｎｌｉｍｉｔｅｄ 爆走兄弟レッツ＆ゴー!! ミニ四駆 プロトセイバーエボリューション",
+    "car_name": "トミカプレミアムｕｎｌｉｍｉｔｅｄ 爆走兄弟レッツ＆ゴー!! ミニ四駆 ビートマグナム",
     "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_tpu_letsgo_mini4_pse_01.webp",
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_tpu_letsgo_beatmagnum_01.webp",
     "is_first_edition": false,
     "manufacturer": null,
     "metadata": {
-      "features": "ローラー回転",
       "price_jpy": 1430,
-      "yymm": "2609"
+      "yymm": "2612"
     },
     "model_number": "",
-    "release_date": null,
-    "retired": false,
-    "series": "premium",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
-    "car_name": "トミカプレミアムｕｎｌｉｍｉｔｅｄ 頭文字D ホンダ シビック SiR-II（EG6）（庄司 慎吾）",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_tpu_iniD_civic_sirII_eg6_01.webp",
-    "is_first_edition": false,
-    "manufacturer": "Honda",
-    "metadata": {
-      "features": "サスペンション、左右ドア開閉",
-      "price_jpy": 1430,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
-    "retired": false,
-    "series": "premium",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
-    "car_name": "トミカプレミアムｕｎｌｉｍｉｔｅｄ 頭文字D 日産 スカイライン GT-R（BNR32）（中里 毅）",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_tpu_iniD_skylineGTR_bnr32_01.webp",
-    "is_first_edition": false,
-    "manufacturer": "Nissan",
-    "metadata": {
-      "features": "サスペンション、左右ドア開閉",
-      "price_jpy": 1430,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
-    "retired": false,
-    "series": "premium",
-    "source": "official",
-    "vehicle_type": null
-  },
-  {
-    "body_color": [],
-    "car_name": "ｔｏｍｉｃａトランスポーター グッドスマイル 初音ミク AMG 2024 Ver.",
-    "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_racing_transporter_hatsunemiku_amg2024_01.webp",
-    "is_first_edition": false,
-    "manufacturer": null,
-    "metadata": {
-      "price_jpy": 3300,
-      "yymm": "2609"
-    },
-    "model_number": "",
-    "release_date": "2026-09-01",
+    "release_date": "2026-12-01",
     "retired": false,
     "series": "premium",
     "source": "official",
@@ -376,7 +247,6 @@
     "manufacturer": "Mitsubishi",
     "metadata": {
       "features": "サスペンション",
-      "price_jpy": 594,
       "yymm": "2610"
     },
     "model_number": "No.30",
@@ -407,17 +277,18 @@
   },
   {
     "body_color": [],
-    "car_name": "三菱ふそう スーパーグレート",
+    "car_name": "三菱 デリカD:5",
     "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_059_01.webp",
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_058_01.webp",
     "is_first_edition": false,
     "manufacturer": "Mitsubishi",
     "metadata": {
+      "features": "サスペンション",
       "price_jpy": 594,
-      "yymm": "2609"
+      "yymm": "2612"
     },
-    "model_number": "No.59",
-    "release_date": "2026-09-01",
+    "model_number": "No.58",
+    "release_date": "2026-12-01",
     "retired": false,
     "series": "regular",
     "source": "official",
@@ -444,18 +315,18 @@
   },
   {
     "body_color": [],
-    "car_name": "日産 エルグランド",
+    "car_name": "日産 フェアレディZ",
     "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_093_01.webp",
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_088_01.webp",
     "is_first_edition": false,
     "manufacturer": "Nissan",
     "metadata": {
       "features": "サスペンション",
       "price_jpy": 594,
-      "yymm": "2609"
+      "yymm": "2612"
     },
-    "model_number": "No.93",
-    "release_date": "2026-09-01",
+    "model_number": "No.88",
+    "release_date": "2026-12-01",
     "retired": false,
     "series": "regular",
     "source": "official",
@@ -482,17 +353,18 @@
   },
   {
     "body_color": [],
-    "car_name": "古河ロックドリル ボルティンガー(B32RL)",
+    "car_name": "ホンダ スーパーカブ＆リヤカー屋台",
     "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_136_01.webp",
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_135_01.webp",
     "is_first_edition": false,
-    "manufacturer": null,
+    "manufacturer": "Honda",
     "metadata": {
+      "features": "屋台連結切り離し/屋台・調理台付け替え",
       "price_jpy": 1100,
-      "yymm": "2609"
+      "yymm": "2612"
     },
-    "model_number": "No.136",
-    "release_date": "2026-09-01",
+    "model_number": "No.135",
+    "release_date": "2026-12-01",
     "retired": false,
     "series": "regular",
     "source": "official",
@@ -518,17 +390,53 @@
   },
   {
     "body_color": [],
-    "car_name": "トミカ アドベントカレンダー2026",
+    "car_name": "トミカでくぐろう！ ロングトンネルセット(トミカ付き)",
     "car_name_en": null,
-    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2609/pic_world_adventcalender_01.webp",
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_world_longtunnel_01.webp",
     "is_first_edition": false,
     "manufacturer": null,
     "metadata": {
-      "price_jpy": 5280,
-      "yymm": "2609"
+      "price_jpy": 3630,
+      "yymm": "2612"
     },
     "model_number": "",
-    "release_date": "2026-09-01",
+    "release_date": "2026-12-01",
+    "retired": false,
+    "series": "town",
+    "source": "official",
+    "vehicle_type": null
+  },
+  {
+    "body_color": [],
+    "car_name": "トミカでわたろう！ ロング大鉄橋セット(トミカ付き)",
+    "car_name_en": null,
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_world_longbridge_01.webp",
+    "is_first_edition": false,
+    "manufacturer": null,
+    "metadata": {
+      "price_jpy": 3630,
+      "yymm": "2612"
+    },
+    "model_number": "",
+    "release_date": "2026-12-01",
+    "retired": false,
+    "series": "town",
+    "source": "official",
+    "vehicle_type": null
+  },
+  {
+    "body_color": [],
+    "car_name": "パーキングトレイ10",
+    "car_name_en": null,
+    "image_url": "https://www.takaratomy.co.jp/products/tomica/new/images/2612/pic_world_parkingtray10_01.webp",
+    "is_first_edition": false,
+    "manufacturer": null,
+    "metadata": {
+      "price_jpy": 990,
+      "yymm": "2612"
+    },
+    "model_number": "",
+    "release_date": "2026-12-01",
     "retired": false,
     "series": "town",
     "source": "official",
